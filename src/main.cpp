@@ -28,18 +28,23 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+    std::uniform_real_distribution<float> unitDist(0.0f, 1.0f);
     std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
 
     for(int i = 0; i < count; ++i) {
         // Generate random point on sphere surface
-        float theta = 2.0f * glm::pi<float>() * dist(gen);
-        float phi = acos(2.0f * dist(gen) - 1.0f);
+        // float theta = 2.0f * glm::pi<float>() * dist(gen);
+        // float phi = acos(2.0f * dist(gen) - 1.0f);
+        float theta = 2.0f * glm::pi<float>() * unitDist(gen);
+        float phi   = acos(1.0f - 2.0f * unitDist(gen));
+    
         
         Particle p;
         p.position = glm::vec3(
             radius * sin(phi) * cos(theta),
             radius * sin(phi) * sin(theta),
-            radius * cos(phi)
+            // radius * cos(phi)
+            0.0f
         );
         
         // Random velocity (scaled for stability)
@@ -47,7 +52,8 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
             // 0.0f, 0.0f, 0.0f
             dist(gen) * 0.001f,
             dist(gen) * 0.001f,
-            dist(gen) * 0.001f
+            // dist(gen) * 0.001f
+            0.0f
         );
         
         // Random pastel color
@@ -89,7 +95,7 @@ int main() {
     glViewport(0, 0, 800, 600);
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    std::vector<Particle> particles = CreateSphereParticles(1, 0.6f);
+    std::vector<Particle> particles = CreateSphereParticles(100000, 0.6f);
 
 
     // VAO and VBO setup
@@ -107,17 +113,25 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
 
+    const GLubyte* vendor = glGetString(GL_VENDOR);
+    const GLubyte* renderer = glGetString(GL_RENDERER);
+    std::cout << vendor << "\t" << renderer << std::endl;
+
+
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
 
     // Main loop
-    float deltaTime = 0.0016;
+    float deltaTime = 0.016;
     float damping_factor = 1.0;
     while (!glfwWindowShouldClose(window)) {
         netAcceleration(particles);
-        std::cout << particles[0].position.x << "\t" << particles[0].position.y << "\t" << particles[0].position.z << "\t" << std::endl;
+        // std::cout << particles[0].position.x << "\t" << particles[0].position.y << "\t" << particles[0].position.z << "\t" << std::endl;
 
 
         for (auto& p : particles) {
+            if(glm::any(glm::isnan(p.position))){
+                std::cout << "What the fuck" << std::endl;
+            }
             p.velocity += p.acceleration * deltaTime;
             p.position += p.velocity;
 

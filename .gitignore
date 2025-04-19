@@ -1,1 +1,7 @@
 /build/
+
+CMakeCommands.txt
+CMakeWindows.txt
+compile_commands.json
+mingw-toolchain.cmake
+.cache/

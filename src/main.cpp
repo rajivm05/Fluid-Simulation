@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "shader.h"
+
 
 // Particle struct with position, velocity, and color
 struct Particle {
@@ -14,31 +16,6 @@ struct Particle {
     glm::vec3 velocity;
     glm::vec4 color;
 };
-
-// Vertex shader
-const char* vertexShaderSource = R"(
-#version 330 core
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec4 color;
-out vec4 vColor;
-void main() {
-    gl_Position = vec4(position, 1.0);
-    gl_PointSize = 30.0;
-    vColor = color;
-}
-)";
-
-// Fragment shader
-const char* fragmentShaderSource = R"(
-#version 330 core
-in vec4 vColor;
-out vec4 FragColor;
-void main() {
-    FragColor = vColor;
-    vec2 c = gl_PointCoord * 2.0 - 1.0;
-    if(dot(c, c) > 1.0) discard;
-}
-)";
 
 std::vector<Particle> CreateSphereParticles(int count, float radius) {
     std::vector<Particle> particles;
@@ -119,19 +96,7 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
 
-    // Shader compilation
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-    glCompileShader(vertexShader);
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-    glCompileShader(fragmentShader);
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
+    Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -149,7 +114,7 @@ int main() {
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-        glUseProgram(shaderProgram);
+        shader.use();
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, particles.size());
 
@@ -160,7 +125,8 @@ int main() {
     // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
-    glDeleteProgram(shaderProgram);
+    glDeleteProgram(shader.ID);
+
     glfwTerminate();
     return 0;
 }

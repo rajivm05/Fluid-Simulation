@@ -15,11 +15,15 @@ struct Particle {
     glm::vec3 position;
     glm::vec3 velocity;
     glm::vec4 color;
+    glm::vec3 acceleration;
+    float density;
+    float pressure;
+
 };
 
 std::vector<Particle> CreateSphereParticles(int count, float radius) {
     std::vector<Particle> particles;
-    particles.reserve(count);
+    // particles.reserve(count);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -40,6 +44,7 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
         
         // Random velocity (scaled for stability)
         p.velocity = glm::vec3(
+            // 0.0f, 0.0f, 0.0f
             dist(gen) * 0.001f,
             dist(gen) * 0.001f,
             dist(gen) * 0.001f
@@ -59,6 +64,12 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
     return particles;
 }
 
+void netAcceleration(std::vector<Particle>& particles){
+    glm::vec3 gravity = {0.0f, -0.0098f, 0.0f};
+    for(auto& p: particles){
+        p.acceleration = gravity;
+    }
+}
 
 int main() {
     
@@ -78,7 +89,7 @@ int main() {
     glViewport(0, 0, 800, 600);
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    std::vector<Particle> particles = CreateSphereParticles(1000, 0.6f);
+    std::vector<Particle> particles = CreateSphereParticles(1, 0.6f);
 
 
     // VAO and VBO setup
@@ -99,13 +110,41 @@ int main() {
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
 
     // Main loop
+    float deltaTime = 0.0016;
+    float damping_factor = 1.0;
     while (!glfwWindowShouldClose(window)) {
+        netAcceleration(particles);
+        std::cout << particles[0].position.x << "\t" << particles[0].position.y << "\t" << particles[0].position.z << "\t" << std::endl;
+
+
         for (auto& p : particles) {
+            p.velocity += p.acceleration * deltaTime;
             p.position += p.velocity;
+
             // Bounce on X edges
-            if (p.position.x > 0.95f || p.position.x < -0.95f) p.velocity.x *= -1.0f;
-            // Bounce on Y edges
-            if (p.position.y > 0.95f || p.position.y < -0.95f) p.velocity.y *= -1.0f;
+            if (p.position.x < -0.95f) 
+            {
+                p.position.x = -0.95f;
+                p.velocity.x *= -p.velocity.x * damping_factor;
+            }
+            if (p.position.x > 0.95f) 
+            {
+                p.position.x = 0.95f;
+                p.velocity.x *= -p.velocity.x * damping_factor;
+            }
+            // // Bounce on Y edges
+            if (p.position.y < -0.95f) 
+                {
+                    // std::cout << "Here" << std::endl;
+                    p.position.y = -0.95f;
+                    p.velocity.y = -p.velocity.y * damping_factor;
+                }
+            if (p.position.y > 0.95f) 
+            {
+                // std::cout << "Here" << std::endl;
+                p.position.y = 0.95f;
+                p.velocity.y = -p.velocity.y * damping_factor;
+            }
         }
         // Update buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -130,3 +169,5 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
+

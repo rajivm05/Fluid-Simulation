@@ -67,33 +67,23 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
 }
 
 void netAcceleration(std::vector<Particle>& particles){
-    glm::vec3 gravity = {0.0f, -0.0098f, 0.0f};
+    glm::vec3 gravity = {0.0f, -0.98f, 0.0f};
     for(auto& p: particles){
         p.acceleration = gravity;
     }
 }
 
 void computeForces(Particle& p) {
-    // glm::vec2 f_pressure(0.0f);
-    // glm::vec2 f_viscosity(0.0f);
-    
-    // for(auto* neighbor : p.neighbors) {
-    //     glm::vec2 r = p.position - neighbor->position;
-        
-    //     // Pressure force
-    //     f_pressure += (p.pressure + neighbor->pressure) / (2 * neighbor->density) 
-    //                 * W_spiky_grad(r, h) * mass;
-        
-    //     // Viscosity force
-    //     f_viscosity += (neighbor->velocity - p.velocity) / neighbor->density 
-    //                 * (45.0f / (M_PI * pow(h,6))) * (h - glm::length(r)) * mass;
-    // }
-    
-    // p.acceleration = (f_pressure + mu*f_viscosity)/p.density + glm::vec2(0.0f, -9.8f);
-    // p.acceleration = glm::vec3(0.0f, -0.0098f, 0.0);
-    for(auto* neighbor : p.neighbors) {
-        // p.color = glm::vec4(0.0, 0.0, 0.0, 0.0);
-        break;
+
+    if(p.neighbors.size() > 0) {
+        p.color = glm::vec4(1.0, 0.0, 0.0, 0.0);
+    } else {
+        p.color = glm::vec4(
+            62.0f/255,
+            164.0f/255,
+            240.0f/255,
+            0.8f
+        );
     }
 
     
@@ -120,8 +110,7 @@ int main() {
     glEnable(GL_PROGRAM_POINT_SIZE);
 
     float sphereRadius = 1.0f;
-    std::vector<Particle> particles = CreateSphereParticles(1000, sphereRadius);
-    // std::vector<Particle> particles = StreamFlow(100, 0.6f);
+    std::vector<Particle> particles = CreateSphereParticles(10, sphereRadius);
 
 
     // VAO and VBO setup
@@ -164,19 +153,19 @@ int main() {
 
         for (auto& p : particles) {
             p.velocity += p.acceleration * deltaTime;
-            p.position += p.velocity;
+            p.position += p.velocity * deltaTime;
 
 
             // Bounce on X edges
             if (p.position.x < -0.95f) 
             {
                 p.position.x = -0.95f;
-                p.velocity.x *= -p.velocity.x * damping_factor;
+                p.velocity.x = -p.velocity.x * damping_factor;
             }
             if (p.position.x > 0.95f) 
             {
                 p.position.x = 0.95f;
-                p.velocity.x *= -p.velocity.x * damping_factor;
+                p.velocity.x = -p.velocity.x * damping_factor;
             }
             // // Bounce on Y edges
             if (p.position.y < -0.95f) 

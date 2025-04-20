@@ -14,6 +14,7 @@
         int y = static_cast<int>(pos.y / cellSize);
         // int z = static_cast<int>(pos.z / cellSize);
         return ((size_t)x * 92837111) ^ ((size_t)y * 689287499);
+        // return (size_t) x * 2 / cellSize + (size_t) y;  
         // return ()
     }
     

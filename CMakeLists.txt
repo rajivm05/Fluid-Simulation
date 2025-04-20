@@ -45,7 +45,7 @@ find_package(OpenGL REQUIRED)
 # --------------------------------------
 # Executable
 # --------------------------------------
-add_executable(simulator src/main.cpp)
+add_executable(simulator ${SOURCES})
 
 # --------------------------------------
 # Link Everything

@@ -7,19 +7,12 @@
 #include <glm/glm.hpp>
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "SpatialHash.h"
 #include "shader.h"
+#include "Particle.h"
 
 
-// Particle struct with position, velocity, and color
-struct Particle {
-    glm::vec3 position;
-    glm::vec3 velocity;
-    glm::vec4 color;
-    glm::vec3 acceleration;
-    float density;
-    float pressure;
 
-};
 
 std::vector<Particle> CreateSphereParticles(int count, float radius) {
     std::vector<Particle> particles;
@@ -58,9 +51,12 @@ std::vector<Particle> CreateSphereParticles(int count, float radius) {
         
         // Random pastel color
         p.color = glm::vec4(
-            0.5f + colorDist(gen) * 0.5f,
-            0.5f + colorDist(gen) * 0.5f,
-            0.5f + colorDist(gen) * 0.5f,
+            // 0.5f + colorDist(gen) * 0.5f,
+            // 0.5f + colorDist(gen) * 0.5f,
+            // 0.5f + colorDist(gen) * 0.5f,
+            62.0f/255,
+            164.0f/255,
+            240.0f/255,
             0.8f
         );
         
@@ -76,6 +72,34 @@ void netAcceleration(std::vector<Particle>& particles){
         p.acceleration = gravity;
     }
 }
+
+void computeForces(Particle& p) {
+    // glm::vec2 f_pressure(0.0f);
+    // glm::vec2 f_viscosity(0.0f);
+    
+    // for(auto* neighbor : p.neighbors) {
+    //     glm::vec2 r = p.position - neighbor->position;
+        
+    //     // Pressure force
+    //     f_pressure += (p.pressure + neighbor->pressure) / (2 * neighbor->density) 
+    //                 * W_spiky_grad(r, h) * mass;
+        
+    //     // Viscosity force
+    //     f_viscosity += (neighbor->velocity - p.velocity) / neighbor->density 
+    //                 * (45.0f / (M_PI * pow(h,6))) * (h - glm::length(r)) * mass;
+    // }
+    
+    // p.acceleration = (f_pressure + mu*f_viscosity)/p.density + glm::vec2(0.0f, -9.8f);
+    // p.acceleration = glm::vec3(0.0f, -0.0098f, 0.0);
+    for(auto* neighbor : p.neighbors) {
+        // p.color = glm::vec4(0.0, 0.0, 0.0, 0.0);
+        break;
+    }
+
+    
+}
+    
+
 
 int main() {
     
@@ -95,7 +119,9 @@ int main() {
     glViewport(0, 0, 800, 600);
     glEnable(GL_PROGRAM_POINT_SIZE);
 
-    std::vector<Particle> particles = CreateSphereParticles(100000, 0.6f);
+    float sphereRadius = 1.0f;
+    std::vector<Particle> particles = CreateSphereParticles(1000, sphereRadius);
+    // std::vector<Particle> particles = StreamFlow(100, 0.6f);
 
 
     // VAO and VBO setup
@@ -122,18 +148,24 @@ int main() {
 
     // Main loop
     float deltaTime = 0.016;
-    float damping_factor = 1.0;
+    float damping_factor = 0.8f;
+
+    // In main() or wherever you create SpatialHash:
+    float h = 0.06f;  // Your smoothing length
+    SpatialHash spatialHash(2.0f*h, h);  // cellSize=2h, h=smoothingLength
+
+
     while (!glfwWindowShouldClose(window)) {
+        spatialHash.update(particles);
+        for(auto& p : particles) spatialHash.findNeighbors(p);
         netAcceleration(particles);
-        // std::cout << particles[0].position.x << "\t" << particles[0].position.y << "\t" << particles[0].position.z << "\t" << std::endl;
+        for(auto& p : particles) computeForces(p);
 
 
         for (auto& p : particles) {
-            if(glm::any(glm::isnan(p.position))){
-                std::cout << "What the fuck" << std::endl;
-            }
             p.velocity += p.acceleration * deltaTime;
             p.position += p.velocity;
+
 
             // Bounce on X edges
             if (p.position.x < -0.95f) 
@@ -149,13 +181,11 @@ int main() {
             // // Bounce on Y edges
             if (p.position.y < -0.95f) 
                 {
-                    // std::cout << "Here" << std::endl;
                     p.position.y = -0.95f;
                     p.velocity.y = -p.velocity.y * damping_factor;
                 }
             if (p.position.y > 0.95f) 
             {
-                // std::cout << "Here" << std::endl;
                 p.position.y = 0.95f;
                 p.velocity.y = -p.velocity.y * damping_factor;
             }

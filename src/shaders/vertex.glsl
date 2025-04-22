@@ -4,10 +4,18 @@ layout(location = 1) in vec4 color;
 
 out vec4 vColor;
 
-uniform mat4 transform;
+uniform mat4 view;
+uniform mat4 projection;
+uniform vec2 screen_size;
+uniform float sprite_size;
 
 void main() {
-    gl_Position = transform * vec4(position, 1.0);
-    gl_PointSize = 500.0 / gl_Position.w;
+    vec4 view_space = view * vec4(position, 1.0);
+    vec4 project_sprite = projection * vec4(sprite_size, sprite_size, view_space.z, view_space.w);
+    vec2 screen_sprite = 0.5 * screen_size * (project_sprite.xy / project_sprite.w);
+
+    gl_PointSize = 0.5 * (screen_sprite.x + screen_sprite.y);
+    gl_Position = projection * view_space;
+
     vColor = color;
 }

@@ -1,4 +1,5 @@
 #include <glad/gl.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include <string>
 #include <fstream>
@@ -84,4 +85,16 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath) {
 
 void Shader::use() { 
     glUseProgram(ID); 
+}
+
+void Shader::setMatrix(const char* name, const glm::mat4& val) {
+    glUniformMatrix4fv(glGetUniformLocation(ID, name), 1, GL_FALSE, glm::value_ptr(val));
+}
+
+void Shader::setVec2(const char* name, const glm::vec2& val) {
+    glUniform2fv(glGetUniformLocation(ID, name), 1, glm::value_ptr(val));
+}
+
+void Shader::setFloat(const char* name, const float val) {
+    glUniform1f(glGetUniformLocation(ID, name), val);
 }

@@ -85,6 +85,8 @@ int main() {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
+    const float sprite_size = 0.5;
+
     while (!glfwWindowShouldClose(window)) {
         spatialHash.update(sph.particles);
         for(auto& p: sph.particles) { spatialHash.findNeighbors(p); }
@@ -97,8 +99,10 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sph.particles.size() * sizeof(Particle), sph.particles.data());
 
-        int transformLoc = glGetUniformLocation(shader.ID, "transform");
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(cam.transform));
+        shader.setMatrix("view", cam.view);
+        shader.setMatrix("projection", cam.projection);
+        shader.setVec2("screen_size", glm::vec2(width, height));
+        shader.setFloat("sprite_size", sprite_size);
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

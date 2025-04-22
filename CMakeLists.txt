@@ -24,7 +24,7 @@ add_subdirectory(external/glfw)
 # GLAD (OpenGL loader)
 add_library(glad external/glad/src/gl.c)
 
-add_library(shader src/shader.cpp)
+add_library(shader src/lib/shader.cpp)
 target_link_libraries(shader glad)
 target_include_directories(shader PUBLIC src/include)
 

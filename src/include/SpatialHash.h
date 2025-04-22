@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <vector>
 #include <glm/glm.hpp>
-#include "Particle.h" // Make sure this includes the Particle struct
+#include "particle.h" // Make sure this includes the Particle struct
 
 class SpatialHash {
     std::unordered_map<size_t, std::vector<Particle*>> grid;

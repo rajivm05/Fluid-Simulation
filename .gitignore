@@ -4,4 +4,5 @@ CMakeCommands.txt
 CMakeWindows.txt
 compile_commands.json
 mingw-toolchain.cmake
+build_win/
 .cache/

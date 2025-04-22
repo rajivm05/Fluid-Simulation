@@ -3,115 +3,54 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include <random>
 #include <glm/glm.hpp>
-#include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 #include "SpatialHash.h"
 #include "shader.h"
-#include "Particle.h"
+#include "particle.h"
+#include "camera.h"
+#include "sph.h"
 
-
-
-
-std::vector<Particle> CreateSphereParticles(int count, float radius) {
-    std::vector<Particle> particles;
-    // particles.reserve(count);
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-    std::uniform_real_distribution<float> unitDist(0.0f, 1.0f);
-    std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
-
-    for(int i = 0; i < count; ++i) {
-        // Generate random point on sphere surface
-        // float theta = 2.0f * glm::pi<float>() * dist(gen);
-        // float phi = acos(2.0f * dist(gen) - 1.0f);
-        float theta = 2.0f * glm::pi<float>() * unitDist(gen);
-        float phi   = acos(1.0f - 2.0f * unitDist(gen));
-    
-        
-        Particle p;
-        p.position = glm::vec3(
-            radius * sin(phi) * cos(theta),
-            radius * sin(phi) * sin(theta),
-            // radius * cos(phi)
-            0.0f
-        );
-        
-        // Random velocity (scaled for stability)
-        p.velocity = glm::vec3(
-            // 0.0f, 0.0f, 0.0f
-            dist(gen) * 0.001f,
-            dist(gen) * 0.001f,
-            // dist(gen) * 0.001f
-            0.0f
-        );
-        
-        // Random pastel color
-        p.color = glm::vec4(
-            // 0.5f + colorDist(gen) * 0.5f,
-            // 0.5f + colorDist(gen) * 0.5f,
-            // 0.5f + colorDist(gen) * 0.5f,
-            62.0f/255,
-            164.0f/255,
-            240.0f/255,
-            0.8f
-        );
-        
-        particles.push_back(p);
-    }
-    
-    return particles;
-}
-
-void netAcceleration(std::vector<Particle>& particles){
-    glm::vec3 gravity = {0.0f, -0.98f, 0.0f};
-    for(auto& p: particles){
-        p.acceleration = gravity;
-    }
-}
-
-void computeForces(Particle& p) {
-
-    if(p.neighbors.size() > 0) {
-        p.color = glm::vec4(1.0, 0.0, 0.0, 0.0);
-    } else {
-        p.color = glm::vec4(
-            62.0f/255,
-            164.0f/255,
-            240.0f/255,
-            0.8f
-        );
-    }
-
-    
-}
-    
-
-
-int main() {
-    
-    // GLFW and OpenGL context setup
-
-    if (!glfwInit()) return -1;
+GLFWwindow* gl_init(const int width, const int height, const char* window_name) {
+    if(!glfwInit()) { exit(1); }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Particles Array", nullptr, nullptr);
-    
-    if (!window) { glfwTerminate(); return -1; }
+    glfwWindowHint(GLFW_DEPTH_BITS, 24);
+
+    GLFWwindow* window = glfwCreateWindow(width, height, window_name, nullptr, nullptr);
+    if(!window) {
+        glfwTerminate();
+        exit(1);
+    }
     glfwMakeContextCurrent(window);
     
-    if (!gladLoadGL(glfwGetProcAddress)) return -1;
+    if(!gladLoadGL(glfwGetProcAddress)) { exit(0); }
     
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, width, height);
     glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_DEPTH_TEST);
 
-    float sphereRadius = 1.0f;
-    std::vector<Particle> particles = CreateSphereParticles(10, sphereRadius);
+    return window;
+}
 
+int main() {
+    const int width = 800;
+    const int height = 600;
+    const char* window_name = "Particles Array";
+
+    GLFWwindow* window = gl_init(width, height, window_name);
+
+    float delta_time = 0.016;
+    float damping_factor = 0.8;
+    int particle_count = 100;
+    int lim_x = 5;
+    int lim_y = 5;
+    int lim_z = 5;
+    SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z};
+
+    sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 2);
 
     // VAO and VBO setup
     GLuint VAO, VBO;
@@ -119,7 +58,7 @@ int main() {
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, particles.size() * sizeof(Particle), particles.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sph.particles.size() * sizeof(Particle), sph.particles.data(), GL_DYNAMIC_DRAW);
 
     // Position attribute
     glEnableVertexAttribArray(0);
@@ -132,69 +71,46 @@ int main() {
     const GLubyte* renderer = glGetString(GL_RENDERER);
     std::cout << vendor << "\t" << renderer << std::endl;
 
-
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
 
-    // Main loop
-    float deltaTime = 0.016;
-    float damping_factor = 0.8f;
+    float h = 0.06f;
+    SpatialHash spatialHash(2.0f*h, h);
 
-    // In main() or wherever you create SpatialHash:
-    float h = 0.06f;  // Your smoothing length
-    SpatialHash spatialHash(2.0f*h, h);  // cellSize=2h, h=smoothingLength
+    glm::vec3 cam_pos(0.0f, 0.0f, 20.0f);
+    glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
+    glm::vec3 cam_up(0.0f, 1.0f, 0.0f);
+    float cam_fov(glm::radians(45.0f));
+    float cam_near = 0.1f;
+    float cam_far = 100.0f;
 
+    Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
     while (!glfwWindowShouldClose(window)) {
-        spatialHash.update(particles);
-        for(auto& p : particles) spatialHash.findNeighbors(p);
-        netAcceleration(particles);
-        for(auto& p : particles) computeForces(p);
+        spatialHash.update(sph.particles);
+        for(auto& p: sph.particles) { spatialHash.findNeighbors(p); }
 
+        sph.calculate_forces();
+        sph.update_state();
+        sph.boundary_conditions();
 
-        for (auto& p : particles) {
-            p.velocity += p.acceleration * deltaTime;
-            p.position += p.velocity * deltaTime;
-
-
-            // Bounce on X edges
-            if (p.position.x < -0.95f) 
-            {
-                p.position.x = -0.95f;
-                p.velocity.x = -p.velocity.x * damping_factor;
-            }
-            if (p.position.x > 0.95f) 
-            {
-                p.position.x = 0.95f;
-                p.velocity.x = -p.velocity.x * damping_factor;
-            }
-            // // Bounce on Y edges
-            if (p.position.y < -0.95f) 
-                {
-                    p.position.y = -0.95f;
-                    p.velocity.y = -p.velocity.y * damping_factor;
-                }
-            if (p.position.y > 0.95f) 
-            {
-                p.position.y = 0.95f;
-                p.velocity.y = -p.velocity.y * damping_factor;
-            }
-        }
         // Update buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, particles.size() * sizeof(Particle), particles.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sph.particles.size() * sizeof(Particle), sph.particles.data());
+
+        int transformLoc = glGetUniformLocation(shader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(cam.transform));
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use();
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, particles.size());
+        glDrawArrays(GL_POINTS, 0, sph.particles.size());
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // Cleanup
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteProgram(shader.ID);
@@ -202,5 +118,3 @@ int main() {
     glfwTerminate();
     return 0;
 }
-
-

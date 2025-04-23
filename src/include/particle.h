@@ -6,9 +6,9 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
-#include <random>
 #include <glm/glm.hpp>
 #include "glm/gtc/matrix_transform.hpp"
+
 // Particle struct with position, velocity, and color
 struct Particle {
     glm::vec3 position;

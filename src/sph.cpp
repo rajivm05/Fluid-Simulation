@@ -1,3 +1,5 @@
+#include <random>
+
 #include "sph.h"
 
 const glm::vec3 SPH::gravity(0.0f, -9.81f, 0.0f);
@@ -40,10 +42,61 @@ void SPH::initialize_particles(glm::vec3 center, float radius) {
     }
 }
 
-void SPH::calculate_forces() {
-    for(auto& p: particles) {
-        p.acceleration = gravity;
+float poly6(glm::vec3 r_v, float h) {
+    float r = glm::length(r_v);
+    if(r <= h) {
+        return 315 / (64 * glm::pi<float>() * glm::pow(h, 9)) * pow((pow(h, 2) - pow(r, 2)), 3);
+    }
 
+    return 0;
+}
+
+glm::vec3 spiky_grad(glm::vec3 r_v, float h) {
+    float r = glm::length(r_v);
+    if(0 < r && r <= h) {
+        return ((float) (-45 / (glm::pi<float>() * pow(h, 6)) * pow((h - r), 2) / r)) * r_v;
+    }
+
+    return glm::vec3(0);
+}
+
+float vanessa_laplace(glm::vec3 r_v, float h) {
+    float r = glm::length(r_v);
+}
+
+void SPH::update_properties() {
+    for(auto& pi: particles) {
+        pi.density = 0;
+
+        for(auto& pj_r: particles) {
+            Particle* pj = &pj_r;
+            pi.density += pj->mass * poly6(pi.position - pj->position, pi.h);
+        }
+
+        pi.pressure = pi.k * (pi.density - pi.rho0);
+    }
+}
+
+void SPH::calculate_forces() {
+    update_properties();
+
+    for(auto& pi: particles) {
+        pi.acceleration = gravity;
+
+        glm::vec3 pressure_force(0.0, 0.0, 0.0);
+
+        for(auto& pj_r: particles) {
+            Particle* pj = &pj_r;
+            if(pj->density == 0.0) { continue; }
+
+            pressure_force -= pj->mass * ((pi.pressure + pj->pressure) / (2 * pj->density)) * spiky_grad(pi.position - pj->position, pi.h);
+        }
+
+        pi.acceleration += pressure_force / pi.density * 0.001f;
+        // std::cout << pressure_force.x / pi.density << std::endl;
+        // std::cout << pi.density << std::endl;
+
+        /*
         if(p.neighbors.size() > 0) {
             p.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
         } else {
@@ -53,7 +106,7 @@ void SPH::calculate_forces() {
                 240.0f/255,
                 0.8f
             );
-        }
+        }*/
     }
 }
 
@@ -98,30 +151,6 @@ void SPH::boundary_conditions() {
     }
 }
 void SPH::create_cuboid(){
-    // box_positions = {
-    //     //t1
-    //     glm::vec3(-lim_x, -lim_y, lim_z),
-    //     glm::vec3(-lim_x, lim_y, lim_z),
-    //     glm::vec3(-lim_x, lim_y, -lim_z),
-
-    //     //t2
-    //     glm::vec3(-lim_x, -lim_y, lim_z),
-    //     glm::vec3(-lim_x, -lim_y, -lim_z),
-    //     glm::vec3(-lim_x, lim_y, -lim_z),
-
-    //     //t3
-    //     glm::vec3(-lim_x, -lim_y, lim_z),
-    //     glm::vec3(-lim_x, -lim_y, -lim_z),
-    //     glm::vec3(lim_x, -lim_y, lim_z),
-
-    //     //t4
-    //     glm::vec3(-lim_x, -lim_y, -lim_z),
-    //     glm::vec3(lim_x, -lim_y, lim_z),
-    //     glm::vec3(lim_x, -lim_y, -lim_z),
-
-    //     //t5
-
-    // };
     box_positions = {
         // t1 - Left face
         glm::vec3(-lim_x, -lim_y,  lim_z),
@@ -172,8 +201,6 @@ void SPH::create_cuboid(){
         glm::vec3(-lim_x,  lim_y, -lim_z),
         glm::vec3( lim_x,  lim_y,  lim_z),
         glm::vec3( lim_x,  lim_y, -lim_z),
-    
-        // Note: front face (z = +lim_z) is omitted intentionally (open box)
     };
     
 }

@@ -12,6 +12,9 @@ private:
 
     static const glm::vec3 gravity;
 
+    void update_properties();
+    float viscocity_laplace();
+
 public:
     std::vector<Particle> particles;
     std::vector<glm::vec3> box_positions;

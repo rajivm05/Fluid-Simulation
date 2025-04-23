@@ -52,7 +52,7 @@ int main() {
 
     float delta_time = 0.016;
     float damping_factor = 0.8;
-    int particle_count = 1000;
+    int particle_count = 100;
     int lim_x = 5;
     int lim_y = 5;
     int lim_z = 5;
@@ -97,7 +97,7 @@ int main() {
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
 
-    float h = 0.6f;
+    float h = 0.1f;
     SpatialHash spatialHash(2.0f*h, h);
 
     glm::vec3 cam_pos(10.0f, 5.0f, 20.0f);

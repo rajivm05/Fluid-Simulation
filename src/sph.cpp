@@ -2,8 +2,8 @@
 
 const glm::vec3 SPH::gravity(0.0f, -9.81f, 0.0f);
 
-SPH::SPH(float dt, float df, int count, int lx, int ly, int lz): delta_time(dt), damping_factor(df),
-    lim_x(lx), lim_y(ly), lim_z(lz), particles(count, Particle {}) {}
+SPH::SPH(float dt, float df, int count, int lx, int ly, int lz, glm::vec4 box_color): delta_time(dt), damping_factor(df),
+    lim_x(lx), lim_y(ly), lim_z(lz), particles(count, Particle {}), box_color(box_color) {}
 
 void SPH::initialize_particles(glm::vec3 center, float radius) {
     std::random_device rd;
@@ -45,7 +45,7 @@ void SPH::calculate_forces() {
         p.acceleration = gravity;
 
         if(p.neighbors.size() > 0) {
-            p.color = glm::vec4(1.0, 0.0, 0.0, 0.0);
+            p.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
         } else {
             p.color = glm::vec4(
                 62.0f/255,
@@ -96,4 +96,84 @@ void SPH::boundary_conditions() {
             p.velocity.z = -p.velocity.z * damping_factor;
         }
     }
+}
+void SPH::create_cuboid(){
+    // box_positions = {
+    //     //t1
+    //     glm::vec3(-lim_x, -lim_y, lim_z),
+    //     glm::vec3(-lim_x, lim_y, lim_z),
+    //     glm::vec3(-lim_x, lim_y, -lim_z),
+
+    //     //t2
+    //     glm::vec3(-lim_x, -lim_y, lim_z),
+    //     glm::vec3(-lim_x, -lim_y, -lim_z),
+    //     glm::vec3(-lim_x, lim_y, -lim_z),
+
+    //     //t3
+    //     glm::vec3(-lim_x, -lim_y, lim_z),
+    //     glm::vec3(-lim_x, -lim_y, -lim_z),
+    //     glm::vec3(lim_x, -lim_y, lim_z),
+
+    //     //t4
+    //     glm::vec3(-lim_x, -lim_y, -lim_z),
+    //     glm::vec3(lim_x, -lim_y, lim_z),
+    //     glm::vec3(lim_x, -lim_y, -lim_z),
+
+    //     //t5
+
+    // };
+    box_positions = {
+        // t1 - Left face
+        glm::vec3(-lim_x, -lim_y,  lim_z),
+        glm::vec3(-lim_x,  lim_y,  lim_z),
+        glm::vec3(-lim_x,  lim_y, -lim_z),
+    
+        // t2 - Left face
+        glm::vec3(-lim_x, -lim_y,  lim_z),
+        glm::vec3(-lim_x, -lim_y, -lim_z),
+        glm::vec3(-lim_x,  lim_y, -lim_z),
+    
+        // t3 - Bottom face
+        glm::vec3(-lim_x, -lim_y,  lim_z),
+        glm::vec3(-lim_x, -lim_y, -lim_z),
+        glm::vec3( lim_x, -lim_y,  lim_z),
+    
+        // t4 - Bottom face
+        glm::vec3(-lim_x, -lim_y, -lim_z),
+        glm::vec3( lim_x, -lim_y,  lim_z),
+        glm::vec3( lim_x, -lim_y, -lim_z),
+    
+        // // t5 - Right face
+        // glm::vec3( lim_x, -lim_y,  lim_z),
+        // glm::vec3( lim_x,  lim_y,  lim_z),
+        // glm::vec3( lim_x,  lim_y, -lim_z),
+    
+        // t6 - Right face
+        // glm::vec3( lim_x, -lim_y,  lim_z),
+        // glm::vec3( lim_x, -lim_y, -lim_z),
+        // glm::vec3( lim_x,  lim_y, -lim_z),
+    
+        // t7 - Back face
+        glm::vec3(-lim_x, -lim_y, -lim_z),
+        glm::vec3(-lim_x,  lim_y, -lim_z),
+        glm::vec3( lim_x,  lim_y, -lim_z),
+    
+        // t8 - Back face
+        glm::vec3(-lim_x, -lim_y, -lim_z),
+        glm::vec3( lim_x, -lim_y, -lim_z),
+        glm::vec3( lim_x,  lim_y, -lim_z),
+    
+        // t9 - Top face
+        glm::vec3(-lim_x,  lim_y,  lim_z),
+        glm::vec3(-lim_x,  lim_y, -lim_z),
+        glm::vec3( lim_x,  lim_y,  lim_z),
+    
+        // t10 - Top face
+        glm::vec3(-lim_x,  lim_y, -lim_z),
+        glm::vec3( lim_x,  lim_y,  lim_z),
+        glm::vec3( lim_x,  lim_y, -lim_z),
+    
+        // Note: front face (z = +lim_z) is omitted intentionally (open box)
+    };
+    
 }

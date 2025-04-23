@@ -12,6 +12,7 @@ public:
 
     void setMatrix(const char* name, const glm::mat4& val);
     void setVec2(const char* name, const glm::vec2& val);
+    void setVec4(const char* name, const glm::vec4& val);
     void setFloat(const char* name, const float val);
 };
   

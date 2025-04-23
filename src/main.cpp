@@ -30,7 +30,10 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
     
     glViewport(0, 0, width, height);
     glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return window;
 }
@@ -44,13 +47,15 @@ int main() {
 
     float delta_time = 0.016;
     float damping_factor = 0.8;
-    int particle_count = 10000;
+    int particle_count = 5000;
     int lim_x = 5;
     int lim_y = 5;
     int lim_z = 5;
-    SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z};
+    glm::vec4 box_color = glm::vec4(0.0, 0.0, 0.0, 0.2);
+    SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
     sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 2);
+    sph.create_cuboid();
 
     // VAO and VBO setup
     GLuint VAO, VBO;
@@ -67,16 +72,30 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
 
+
+    //cuboid conditions
+    GLuint cVAO, cVBO;
+    glGenVertexArrays(1, &cVAO);
+    glGenBuffers(1, &cVBO);
+    glBindVertexArray(cVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cVBO);
+    glBufferData(GL_ARRAY_BUFFER, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data(), GL_DYNAMIC_DRAW);
+
+    // Position attribute
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
     std::cout << vendor << "\t" << renderer << std::endl;
 
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
+    Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
 
-    float h = 0.06f;
+    float h = 0.6f;
     SpatialHash spatialHash(2.0f*h, h);
 
-    glm::vec3 cam_pos(0.0f, 0.0f, 20.0f);
+    glm::vec3 cam_pos(10.0f, 5.0f, 20.0f);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
     glm::vec3 cam_up(0.0f, 1.0f, 0.0f);
     float cam_fov(glm::radians(45.0f));
@@ -99,17 +118,27 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sph.particles.size() * sizeof(Particle), sph.particles.data());
 
-        shader.setMatrix("view", cam.view);
-        shader.setMatrix("projection", cam.projection);
-        shader.setVec2("screen_size", glm::vec2(width, height));
-        shader.setFloat("sprite_size", sprite_size);
+        glBindBuffer(GL_ARRAY_BUFFER, cVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         shader.use();
+        shader.setMatrix("view", cam.view);
+        shader.setMatrix("projection", cam.projection);
+        shader.setVec2("screen_size", glm::vec2(width, height));
+        shader.setFloat("sprite_size", sprite_size);
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, sph.particles.size());
+
+        cShader.use();
+        cShader.setMatrix("view", cam.view);
+        cShader.setMatrix("projection", cam.projection);
+        cShader.setVec4("box_color", sph.box_color);
+        glBindVertexArray(cVAO);
+        glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());
 
         glfwSwapBuffers(window);
         glfwPollEvents();

@@ -44,7 +44,7 @@ int main() {
 
     float delta_time = 0.016;
     float damping_factor = 0.8;
-    int particle_count = 100;
+    int particle_count = 10000;
     int lim_x = 5;
     int lim_y = 5;
     int lim_z = 5;

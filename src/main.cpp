@@ -12,6 +12,10 @@
 #include "camera.h"
 #include "sph.h"
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
 GLFWwindow* gl_init(const int width, const int height, const char* window_name) {
     if(!glfwInit()) { exit(1); }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -25,6 +29,7 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
         exit(1);
     }
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
     if(!gladLoadGL(glfwGetProcAddress)) { exit(0); }
     
@@ -47,7 +52,7 @@ int main() {
 
     float delta_time = 0.016;
     float damping_factor = 0.8;
-    int particle_count = 5000;
+    int particle_count = 1000;
     int lim_x = 5;
     int lim_y = 5;
     int lim_z = 5;

@@ -84,8 +84,9 @@ void SpatialHash::build(std::vector<Particle>& particles) {
 
     std::sort(m_sortedParticles.begin(), m_sortedParticles.end(),
         [this](const Particle* a, const Particle* b) {
-            return computeHash(positionToCell(a->position)) < 
-                   computeHash(positionToCell(b->position));
+            // return computeHash(positionToCell(a->position)) < computeHash(positionToCell(b->position));
+            return a->hash_value < b->hash_value;
+
         });
 
     // 3. Build hash table

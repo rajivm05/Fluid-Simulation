@@ -26,9 +26,10 @@ private:
     std::vector<Particle*> m_sortedParticles;
     
     // Hash computation
-    uint32_t computeHash(const glm::ivec3& cell) const;
     
 public:
+    uint32_t computeHash(const glm::ivec3& cell) const;
+
     SpatialHash(float cellSize, uint32_t tableSize = 262144);
     ~SpatialHash();
 

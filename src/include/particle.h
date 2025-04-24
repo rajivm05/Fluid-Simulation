@@ -17,13 +17,7 @@ struct Particle {
     glm::vec3 acceleration;
     float density;
     float pressure;
-
-    //added constraints
-    const float h = 0.1f;       // Smoothing radius
-    const float mass = 0.05f;   // Particle mass
-    const float rho0 = 1000.0f; // Reference density
-    const float k = 10.5f;    // Pressure stiffness
-    const float mu = 1.0f;      // Viscosity
+    uint32_t hash_value;
 
     std::vector<Particle*> neighbors;  
 

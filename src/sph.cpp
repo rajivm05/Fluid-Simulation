@@ -4,7 +4,7 @@
 
 const glm::vec3 SPH::gravity(0.0f, -9.81f, 0.0f);
 
-SPH::SPH(float dt, float df, int count, int lx, int ly, int lz, glm::vec4 box_color): delta_time(dt), damping_factor(df),
+SPH::SPH(float dt, float df, int count, float lx, float ly, float lz, glm::vec4 box_color): delta_time(dt), damping_factor(df),
     lim_x(lx), lim_y(ly), lim_z(lz), particles(count, Particle {}), box_color(box_color) {}
 
 void SPH::initialize_particles(glm::vec3 center, float radius) {
@@ -40,6 +40,9 @@ void SPH::initialize_particles(glm::vec3 center, float radius) {
             240.0f / 255,
             0.8f
         );
+        // p.density = rho0;
+
+        
     }
 }
 
@@ -62,6 +65,7 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
                     240.0f / 255.0f,
                     0.8f
                 );
+                p.density = rho0;
 
                 particles.push_back(p);
             }
@@ -69,28 +73,27 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
     }
 }
 
-float poly6(glm::vec3 r_v, float h) {
+float SPH::poly6(glm::vec3 r_v, float h) {
     float r = glm::length(r_v);
     if(r <= h) {
-        return 315 / (64 * glm::pi<float>() * glm::pow(h, 9)) * pow((pow(h, 2) - pow(r, 2)), 3);
+        return poly6_const * pow((pow(h, 2) - pow(r, 2)), 3);
     }
-
     return 0;
 }
 
-glm::vec3 spiky_grad(glm::vec3 r_v, float h) {
+glm::vec3 SPH::spiky_grad(glm::vec3 r_v, float h) {
     float r = glm::length(r_v);
     if(0 < r && r <= h) {
-        return ((float) (-45 / (glm::pi<float>() * pow(h, 6)) * pow((h - r), 2) / r)) * r_v;
+        return ((float) (spikyGrad_const * pow((h - r), 2) / r)) * r_v;
     }
 
     return glm::vec3(0);
 }
 
-float viscosity_laplace(glm::vec3 r_v, float h) {
+float SPH::viscosity_laplace(glm::vec3 r_v, float h) {
     float r = glm::length(r_v);
     if(0 < r && r<=h){
-        return ((float) (45/(glm::pi<float>() * pow(h, 6))) * (h-r));
+        return ((float) viscosityLaplace_const * (h-r));
     }
     return 0.0f;
 }
@@ -100,18 +103,23 @@ float viscosity_laplace(glm::vec3 r_v, float h) {
 void SPH::update_properties() {
 
     for(auto& pi: particles) {
-        pi.density = 0;
+        pi.density = 0.0f;
         // std::cout << "particle neighbors: \t" << pi.neighbors.size() << std::endl;
 
         // for(auto& pj_r: particles) {
+        //algo
+        //obtain hash value of cell of particle
+        //iterate through all particles in the cell
+
         for(auto& pj:pi.neighbors){ 
             // Particle* pj = &pj_r;
-            pi.density += pj->mass * poly6(pi.position - pj->position, pi.h);
+            pi.density += mass * poly6(pi.position - pj->position, h);
             // std::cout << "Updating density: \t" << pi.density << std::endl;
 
         }
+        // std::cout << "density: \t" << pi.density - rho0 << std::endl;
 
-        pi.pressure = pi.k * (pi.density - pi.rho0);
+        pi.pressure = k * (pi.density - rho0);
     }
 }
 
@@ -131,67 +139,63 @@ void SPH::calculate_forces() {
         
             if(pj->density == 0.0) { continue; }
 
-            pressure_force -= pj->mass * ((pi.pressure + pj->pressure) / (2 * pj->density)) * spiky_grad(pi.position - pj->position, pi.h);
-            viscosity_force += pj->mu * pj->mass * (pj->velocity - pi.velocity) * viscosity_laplace(pi.position - pj->position, pi.h) / pj->density;
+            pressure_force -= mass * ((pi.pressure + pj->pressure) / (2 * pj->density)) * spiky_grad(pi.position - pj->position, h);
+            viscosity_force += mu * mass * (pj->velocity - pi.velocity) * viscosity_laplace(pi.position - pj->position, h) / pj->density;
 
         }
         if(pi.density == 0){continue;}
         pi.acceleration += pressure_force / pi.density  ;
         pi.acceleration += viscosity_force / pi.density ;
-        // pi.neighbors.clear();
+        // std::cout << pi.neighbors.size()<< std::endl;
+
+        pi.neighbors.clear();
     //     // std::cout << pressure_force.x / pi.density << std::endl;
     //     // std::cout << pi.density << std::endl;
-
-        
-        if(pi.neighbors.size() > 0) {
-            pi.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
-        } else {
-            pi.color = glm::vec4(
-                62.0f/255,
-                164.0f/255,
-                240.0f/255,
-                0.8f
-            );
-        }
     }
+        // std::cout << "---------------------------------------------------------" << std::endl;
+
 }
 
 void SPH::update_state() {
     for(auto& p: particles) {
         p.velocity += p.acceleration * delta_time;
         p.position += p.velocity * delta_time;
+
     }
 }
 
-void SPH::boundary_conditions() {
+void SPH::boundary_conditions(float sprite_size) {
+    float flim_x = lim_x - sprite_size;
+    float flim_y = lim_y - sprite_size;
+    float flim_z = lim_z - sprite_size;
     for(auto& p: particles) {
-        if(p.position.x < -lim_x) {
-            p.position.x = -lim_x;
+        if(p.position.x < -flim_x) {
+            p.position.x = -flim_x;
             p.velocity.x = -p.velocity.x * damping_factor;
         }
 
-        if(p.position.x > lim_x) {
-            p.position.x = lim_x;
+        if(p.position.x > flim_x) {
+            p.position.x = flim_x;
             p.velocity.x = -p.velocity.x * damping_factor;
         }
 
-        if(p.position.y < -lim_y) {
-            p.position.y = -lim_y;
+        if(p.position.y < -flim_y) {
+            p.position.y = -flim_y;
             p.velocity.y = -p.velocity.y * damping_factor;
         }
 
-        if(p.position.y > lim_y) {
-            p.position.y = lim_y;
+        if(p.position.y > flim_y) {
+            p.position.y = flim_y;
             p.velocity.y = -p.velocity.y * damping_factor;
         }
 
-        if(p.position.z < -lim_z) {
-            p.position.z = -lim_z;
+        if(p.position.z < -flim_z) {
+            p.position.z = -flim_z;
             p.velocity.z = -p.velocity.z * damping_factor;
         }
 
-        if(p.position.z > lim_z) {
-            p.position.z = lim_z;
+        if(p.position.z > flim_z) {
+            p.position.z = flim_z;
             p.velocity.z = -p.velocity.z * damping_factor;
         }
     }

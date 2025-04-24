@@ -206,10 +206,10 @@ void SPH::boundary_conditions(float sprite_size) {
             p.velocity.y = -p.velocity.y * damping_factor;
         }
 
-        if(p.position.y > flim_y) {
-            p.position.y = flim_y;
-            p.velocity.y = -p.velocity.y * damping_factor;
-        }
+        // if(p.position.y > flim_y) {
+        //     p.position.y = flim_y;
+        //     p.velocity.y = -p.velocity.y * damping_factor;
+        // }
 
         if(p.position.z < -flim_z) {
             p.position.z = -flim_z;
@@ -245,14 +245,14 @@ void SPH::create_cuboid(){
         glm::vec3( lim_x, -lim_y, -lim_z),
     
         // // t5 - Right face
-        // glm::vec3( lim_x, -lim_y,  lim_z),
-        // glm::vec3( lim_x,  lim_y,  lim_z),
-        // glm::vec3( lim_x,  lim_y, -lim_z),
+        glm::vec3( lim_x, -lim_y,  lim_z),
+        glm::vec3( lim_x,  lim_y,  lim_z),
+        glm::vec3( lim_x,  lim_y, -lim_z),
     
         // t6 - Right face
-        // glm::vec3( lim_x, -lim_y,  lim_z),
-        // glm::vec3( lim_x, -lim_y, -lim_z),
-        // glm::vec3( lim_x,  lim_y, -lim_z),
+        glm::vec3( lim_x, -lim_y,  lim_z),
+        glm::vec3( lim_x, -lim_y, -lim_z),
+        glm::vec3( lim_x,  lim_y, -lim_z),
     
         // t7 - Back face
         glm::vec3(-lim_x, -lim_y, -lim_z),

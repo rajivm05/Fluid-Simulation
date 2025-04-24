@@ -78,16 +78,16 @@ int main() {
     float delta_time = 0.016f;
     // float delta_time = 0.0083f;
     float damping_factor = 0.4;
-    int particle_count = 1;
-    float scale = 5.0f;
+    int particle_count = 10000;
+    float scale = 1.0f;
     float lim_x = 1.0f/scale;  
-    float lim_y = 1.0f/scale;
+    float lim_y = 1.0f/pow(scale, 1.5);
     float lim_z = 1.0f/scale;
     glm::vec4 box_color = glm::vec4(0.0, 0.0, 0.0, 0.2);
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
-    // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5);
-    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
+    sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
+    // sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
     
     sph.create_cuboid();
 
@@ -143,6 +143,8 @@ int main() {
 
     const float sprite_size = 0.2;
 
+    float radius = 5.0f;  // distance from center
+
     while (!glfwWindowShouldClose(window)) {
         spatialHash.build(sph.particles);
 
@@ -152,6 +154,14 @@ int main() {
         //     spatialHash.queryNeighbors(p, 2*h);
 
         // }
+        float angle = glfwGetTime()/2.0f;
+        cam_pos = glm::vec3(
+            radius * std::sin(angle),  // X
+            2.0f,                      // Y (height stays fixed)
+            radius * std::cos(angle)   // Z
+        )/scale;
+        cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
+
         parallelNeighborQuery(sph, spatialHash, h);
 
         sph.calculate_forces();
@@ -186,7 +196,7 @@ int main() {
         cShader.setMatrix("projection", cam.projection);
         cShader.setVec4("box_color", sph.box_color);
         glBindVertexArray(cVAO);
-        glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());
+        glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
 
         glfwSwapBuffers(window);
         glfwPollEvents();

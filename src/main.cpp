@@ -50,16 +50,19 @@ int main() {
 
     GLFWwindow* window = gl_init(width, height, window_name);
 
-    float delta_time = 0.016;
-    float damping_factor = 0.8;
-    int particle_count = 1000;
-    int lim_x = 5;
-    int lim_y = 5;
-    int lim_z = 5;
+    float delta_time = 0.016f;
+    // float delta_time = 0.0083f;
+    float damping_factor = 0.4;
+    int particle_count = 1;
+    float lim_x = 0.2f;  
+    float lim_y = 0.2f;
+    float lim_z = 0.2f;
     glm::vec4 box_color = glm::vec4(0.0, 0.0, 0.0, 0.2);
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
-    sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 2);
+    // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5);
+    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/5, 0.05/5);
+    
     sph.create_cuboid();
 
     // VAO and VBO setup
@@ -97,10 +100,13 @@ int main() {
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
 
-    float h = 0.6f;
-    SpatialHash spatialHash(2.0f*h, h);
+    float h = 0.06f;
+    SpatialHash spatialHash(2.0f*h);
+    for(auto& p: sph.particles){
+        p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
+    }
 
-    glm::vec3 cam_pos(10.0f, 5.0f, 20.0f);
+    glm::vec3 cam_pos(5.0f/5, 2.0f/5, 5.0f/5);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
     glm::vec3 cam_up(0.0f, 1.0f, 0.0f);
     float cam_fov(glm::radians(45.0f));
@@ -109,15 +115,25 @@ int main() {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.5;
+    const float sprite_size = 0.2/3;
 
     while (!glfwWindowShouldClose(window)) {
-        spatialHash.update(sph.particles);
-        for(auto& p: sph.particles) { spatialHash.findNeighbors(p); }
+        spatialHash.build(sph.particles);
+
+        #pragma omp parallel for
+        for(auto& p: sph.particles) 
+        { 
+            spatialHash.queryNeighbors(p, 2*h);
+
+        }
 
         sph.calculate_forces();
         sph.update_state();
-        sph.boundary_conditions();
+        sph.boundary_conditions(sprite_size/6);
+        for(auto& p: sph.particles){
+            p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
+        }
+        
 
         // Update buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);

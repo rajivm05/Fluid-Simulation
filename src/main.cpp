@@ -87,7 +87,7 @@ int main() {
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
     // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5);
-    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale + 1));
+    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
     
     sph.create_cuboid();
 

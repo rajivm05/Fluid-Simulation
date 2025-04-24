@@ -13,7 +13,6 @@ private:
     static const glm::vec3 gravity;
 
     void update_properties();
-    float viscocity_laplace();
 
 public:
     std::vector<Particle> particles;
@@ -27,5 +26,7 @@ public:
     void update_state();
     void boundary_conditions();
     void create_cuboid();
+    void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
+
 };
 

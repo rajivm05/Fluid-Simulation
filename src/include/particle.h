@@ -20,10 +20,10 @@ struct Particle {
 
     //added constraints
     const float h = 0.1f;       // Smoothing radius
-    const float mass = 0.02f;   // Particle mass
+    const float mass = 0.05f;   // Particle mass
     const float rho0 = 1000.0f; // Reference density
-    const float k = 1000.0f;    // Pressure stiffness
-    const float mu = 0.1f;      // Viscosity
+    const float k = 10.5f;    // Pressure stiffness
+    const float mu = 1.0f;      // Viscosity
 
     std::vector<Particle*> neighbors;  
 

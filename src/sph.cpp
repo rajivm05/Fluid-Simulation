@@ -24,9 +24,10 @@ void SPH::initialize_particles(glm::vec3 center, float radius) {
         );
 
         p.velocity = glm::vec3(
-            (1.0f - 2.0f * dist(gen)) * 10,
-            (1.0f - 2.0f * dist(gen)) * 10,
-            (1.0f - 2.0f * dist(gen)) * 10
+            // (1.0f - 2.0f * dist(gen)) * 0.5,
+            // (1.0f - 2.0f * dist(gen)) * 0.5,
+            // (1.0f - 2.0f * dist(gen)) * 0.5
+            0, 0, 0
         );
 
         p.color = glm::vec4(
@@ -39,6 +40,32 @@ void SPH::initialize_particles(glm::vec3 center, float radius) {
             240.0f / 255,
             0.8f
         );
+    }
+}
+
+void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float spacing) {
+    particles.clear();  // optional: clear existing particles
+
+    int particles_per_axis = static_cast<int>(side_length / spacing);
+    glm::vec3 start = center - glm::vec3(side_length) * 0.5f;
+
+    for (int x = 0; x < particles_per_axis; ++x) {
+        for (int y = 0; y < particles_per_axis; ++y) {
+            for (int z = 0; z < particles_per_axis; ++z) {
+                Particle p;
+                p.position = start + glm::vec3(x, y, z) * spacing;
+
+                p.velocity = glm::vec3(0.0f);  // initial rest
+                p.color = glm::vec4(
+                    62.0f / 255.0f,
+                    164.0f / 255.0f,
+                    240.0f / 255.0f,
+                    0.8f
+                );
+
+                particles.push_back(p);
+            }
+        }
     }
 }
 
@@ -60,17 +87,28 @@ glm::vec3 spiky_grad(glm::vec3 r_v, float h) {
     return glm::vec3(0);
 }
 
-float vanessa_laplace(glm::vec3 r_v, float h) {
+float viscosity_laplace(glm::vec3 r_v, float h) {
     float r = glm::length(r_v);
+    if(0 < r && r<=h){
+        return ((float) (45/(glm::pi<float>() * pow(h, 6))) * (h-r));
+    }
+    return 0.0f;
 }
 
+
+
 void SPH::update_properties() {
+
     for(auto& pi: particles) {
         pi.density = 0;
+        // std::cout << "particle neighbors: \t" << pi.neighbors.size() << std::endl;
 
-        for(auto& pj_r: particles) {
-            Particle* pj = &pj_r;
+        // for(auto& pj_r: particles) {
+        for(auto& pj:pi.neighbors){ 
+            // Particle* pj = &pj_r;
             pi.density += pj->mass * poly6(pi.position - pj->position, pi.h);
+            // std::cout << "Updating density: \t" << pi.density << std::endl;
+
         }
 
         pi.pressure = pi.k * (pi.density - pi.rho0);
@@ -78,35 +116,43 @@ void SPH::update_properties() {
 }
 
 void SPH::calculate_forces() {
+
     update_properties();
 
     for(auto& pi: particles) {
         pi.acceleration = gravity;
 
         glm::vec3 pressure_force(0.0, 0.0, 0.0);
+        glm::vec3 viscosity_force(0.0, 0.0, 0.0);
 
-        for(auto& pj_r: particles) {
-            Particle* pj = &pj_r;
+        // // for(auto& pj_r: particles) {
+        //     // Particle* pj = &pj_r;
+        for(auto& pj:pi.neighbors){ 
+        
             if(pj->density == 0.0) { continue; }
 
             pressure_force -= pj->mass * ((pi.pressure + pj->pressure) / (2 * pj->density)) * spiky_grad(pi.position - pj->position, pi.h);
+            viscosity_force += pj->mu * pj->mass * (pj->velocity - pi.velocity) * viscosity_laplace(pi.position - pj->position, pi.h) / pj->density;
+
         }
+        if(pi.density == 0){continue;}
+        pi.acceleration += pressure_force / pi.density  ;
+        pi.acceleration += viscosity_force / pi.density ;
+        // pi.neighbors.clear();
+    //     // std::cout << pressure_force.x / pi.density << std::endl;
+    //     // std::cout << pi.density << std::endl;
 
-        pi.acceleration += pressure_force / pi.density * 0.001f;
-        // std::cout << pressure_force.x / pi.density << std::endl;
-        // std::cout << pi.density << std::endl;
-
-        /*
-        if(p.neighbors.size() > 0) {
-            p.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
+        
+        if(pi.neighbors.size() > 0) {
+            pi.color = glm::vec4(1.0, 0.0, 0.0, 1.0);
         } else {
-            p.color = glm::vec4(
+            pi.color = glm::vec4(
                 62.0f/255,
                 164.0f/255,
                 240.0f/255,
                 0.8f
             );
-        }*/
+        }
     }
 }
 

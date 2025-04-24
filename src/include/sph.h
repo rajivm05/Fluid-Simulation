@@ -38,7 +38,7 @@ public:
 
     void initialize_particles(glm::vec3 center, float radius);
     void calculate_forces();
-    void update_state();
+    void update_state(int numThreads);
     void boundary_conditions(float sprite_size);
     void create_cuboid();
     void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
@@ -46,6 +46,8 @@ public:
     float poly6(glm::vec3 r_v, float h);
     glm::vec3 spiky_grad(glm::vec3 r_v, float h);
     float viscosity_laplace(glm::vec3 r_v, float h);
+
+    
         
 
 };

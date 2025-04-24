@@ -1,4 +1,5 @@
 #include <random>
+#include <thread>
 
 #include "sph.h"
 
@@ -156,11 +157,32 @@ void SPH::calculate_forces() {
 
 }
 
-void SPH::update_state() {
-    for(auto& p: particles) {
-        p.velocity += p.acceleration * delta_time;
-        p.position += p.velocity * delta_time;
+void update_state_chunk(std::vector<Particle>& particles, size_t start, size_t end, float delta_time) {
+    for (size_t i = start; i < end; ++i) {
+        particles[i].velocity += particles[i].acceleration * delta_time;
+        particles[i].position += particles[i].velocity * delta_time;
+    }
+}
 
+void SPH::update_state(int numThreads) {
+    // for(auto& p: particles) {
+    //     p.velocity += p.acceleration * delta_time;
+    //     p.position += p.velocity * delta_time;
+
+    // }
+    size_t N = particles.size();
+    size_t chunkSize = (N + numThreads - 1) / numThreads;
+
+    std::vector<std::thread> threads;
+    for (int t = 0; t < numThreads; ++t) {
+        size_t start = t * chunkSize;
+        size_t end = std::min(start + chunkSize, N);
+
+        threads.emplace_back(update_state_chunk, std::ref(particles), start, end, delta_time);
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
     }
 }
 

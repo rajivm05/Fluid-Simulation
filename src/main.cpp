@@ -12,6 +12,29 @@
 #include "camera.h"
 #include "sph.h"
 
+#include <thread>
+
+void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start, int end, float h) {
+    for (int i = start; i < end; ++i)
+        sh.queryNeighbors(particles[i], 2 * h);
+}
+
+void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
+    int N = sph.particles.size();
+    int chunk = (N + numThreads - 1) / numThreads;
+
+    std::vector<std::thread> threads;
+
+    for (int t = 0; t < numThreads; ++t) {
+        int start = t * chunk;
+        int end = std::min(N, start + chunk);
+        threads.emplace_back(threadedQuery, std::ref(sh), std::ref(sph.particles), start, end, h);
+    }
+
+    for (auto& t : threads)
+        t.join();
+}
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -44,6 +67,8 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
 }
 
 int main() {
+    int numThreads = std::thread::hardware_concurrency();
+    std::cout << "Using " << numThreads << " threads\n";
     const int width = 800;
     const int height = 600;
     const char* window_name = "Particles Array";
@@ -54,14 +79,15 @@ int main() {
     // float delta_time = 0.0083f;
     float damping_factor = 0.4;
     int particle_count = 1;
-    float lim_x = 0.2f;  
-    float lim_y = 0.2f;
-    float lim_z = 0.2f;
+    float scale = 5.0f;
+    float lim_x = 1.0f/scale;  
+    float lim_y = 1.0f/scale;
+    float lim_z = 1.0f/scale;
     glm::vec4 box_color = glm::vec4(0.0, 0.0, 0.0, 0.2);
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
     // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5);
-    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/5, 0.05/5);
+    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale + 1));
     
     sph.create_cuboid();
 
@@ -115,21 +141,22 @@ int main() {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.2/3;
+    const float sprite_size = 0.2;
 
     while (!glfwWindowShouldClose(window)) {
         spatialHash.build(sph.particles);
 
-        #pragma omp parallel for
-        for(auto& p: sph.particles) 
-        { 
-            spatialHash.queryNeighbors(p, 2*h);
+        // #pragma omp parallel for
+        // for(auto& p: sph.particles) 
+        // { 
+        //     spatialHash.queryNeighbors(p, 2*h);
 
-        }
+        // }
+        parallelNeighborQuery(sph, spatialHash, h);
 
         sph.calculate_forces();
-        sph.update_state();
-        sph.boundary_conditions(sprite_size/6);
+        sph.update_state(numThreads);
+        sph.boundary_conditions(sprite_size/(scale + 1));
         for(auto& p: sph.particles){
             p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
         }

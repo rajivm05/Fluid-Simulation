@@ -87,7 +87,7 @@ int main() {
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
     // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
-    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
+    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/scale);
     
     sph.create_cuboid();
 
@@ -141,7 +141,7 @@ int main() {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.2;
+    const float sprite_size = 0.2/scale;
 
     float radius = 5.0f;  // distance from center
 
@@ -164,8 +164,9 @@ int main() {
 
         parallelNeighborQuery(sph, spatialHash, h);
 
-        sph.calculate_forces();
-        sph.update_state(numThreads);
+        sph.parallel(&SPH::update_properties);
+        sph.parallel(&SPH::calculate_forces);
+        sph.parallel(&SPH::update_state);
         sph.boundary_conditions(sprite_size/(scale + 1));
         for(auto& p: sph.particles){
             p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));

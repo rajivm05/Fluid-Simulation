@@ -1,12 +1,11 @@
 #include <random>
-#include <thread>
 
 #include "sph.h"
 
 const glm::vec3 SPH::gravity(0.0f, -9.81f, 0.0f);
 
 SPH::SPH(float dt, float df, int count, float lx, float ly, float lz, glm::vec4 box_color): delta_time(dt), damping_factor(df),
-    lim_x(lx), lim_y(ly), lim_z(lz), buffer(count, Particle_buffer {}), box_color(box_color) {}
+    lim_x(lx), lim_y(ly), lim_z(lz), buffer(count, Particle_buffer {}), box_color(box_color), num_threads(std::thread::hardware_concurrency()) {}
 
 void SPH::initialize_particles(glm::vec3 center, float radius) {
     std::random_device rd;
@@ -105,11 +104,11 @@ float SPH::viscosity_laplace(glm::vec3 r_v, float h) {
     return 0.0f;
 }
 
+void SPH::update_properties(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end) {
 
+    for(auto i = begin; i != end; i++) {
+        auto& pi = *i;
 
-void SPH::update_properties() {
-
-    for(auto& pi: particles) {
         pi.density = 0.0f;
         // std::cout << "particle neighbors: \t" << pi.neighbors.size() << std::endl;
 
@@ -130,11 +129,10 @@ void SPH::update_properties() {
     }
 }
 
-void SPH::calculate_forces() {
+void SPH::calculate_forces(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end) {
+    for(auto i = begin; i != end; i++) {
+        auto& pi = *i;
 
-    update_properties();
-
-    for(auto& pi: particles) {
         pi.acceleration = gravity;
 
         glm::vec3 pressure_force(0.0, 0.0, 0.0);
@@ -163,32 +161,13 @@ void SPH::calculate_forces() {
 
 }
 
-void update_state_chunk(std::vector<Particle>& particles, size_t start, size_t end, float delta_time) {
-    for (size_t i = start; i < end; ++i) {
-        particles[i].velocity += particles[i].acceleration * delta_time;
-        particles[i].position += particles[i].velocity * delta_time;
-    }
-}
+void SPH::update_state(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end) {
+    for(auto i = begin; i != end; i++) {
+        auto& p = *i;
 
-void SPH::update_state(int numThreads) {
-    // for(auto& p: particles) {
-    //     p.velocity += p.acceleration * delta_time;
-    //     p.position += p.velocity * delta_time;
+        p.velocity += p.acceleration * delta_time;
+        p.position += p.velocity * delta_time;
 
-    // }
-    size_t N = particles.size();
-    size_t chunkSize = (N + numThreads - 1) / numThreads;
-
-    std::vector<std::thread> threads;
-    for (int t = 0; t < numThreads; ++t) {
-        size_t start = t * chunkSize;
-        size_t end = std::min(start + chunkSize, N);
-
-        threads.emplace_back(update_state_chunk, std::ref(particles), start, end, delta_time);
-    }
-
-    for (auto& thread : threads) {
-        thread.join();
     }
 }
 

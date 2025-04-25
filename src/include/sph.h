@@ -1,4 +1,6 @@
 #include <vector>
+#include <thread>
+#include <functional>
 #include "particle.h"
 
 class SPH {
@@ -12,8 +14,7 @@ private:
 
     static const glm::vec3 gravity;
 
-    void update_properties();
-
+    int num_threads;
 public:
     std::vector<Particle> particles;
     std::vector<Particle_buffer> buffer;
@@ -38,8 +39,9 @@ public:
     SPH(float dt, float df, int count, float lx, float ly, float lz, glm::vec4 box_color);
 
     void initialize_particles(glm::vec3 center, float radius);
-    void calculate_forces();
-    void update_state(int numThreads);
+    void update_properties(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
+    void calculate_forces(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
+    void update_state(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void boundary_conditions(float sprite_size);
     void create_cuboid();
     void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
@@ -48,8 +50,28 @@ public:
     glm::vec3 spiky_grad(glm::vec3 r_v, float h);
     float viscosity_laplace(glm::vec3 r_v, float h);
 
-    
-        
+    template <typename Func, typename... Args>
+    void parallel(Func&& func, Args&&... args) {
+        int total = particles.size();
+        int chunk = (total + num_threads - 1) / num_threads;
+
+        std::vector<std::thread> threads;
+
+        for(int i = 0; i < num_threads; i++) {
+            auto begin = particles.begin() + i * chunk;
+            auto end = particles.begin() + std::min((i + 1) * chunk, total);
+
+            if(begin - particles.begin() >= total) { break; }
+
+            threads.emplace_back(
+                [this, begin, end, &func, &args...]() {
+                    std::invoke(func, this, begin, end, std::forward<Args>(args)...);
+                }
+            );
+        }
+
+        for(auto& t: threads) { t.join(); }
+    }
 
 };
 

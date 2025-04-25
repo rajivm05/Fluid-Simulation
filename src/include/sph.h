@@ -26,7 +26,7 @@ public:
     const float rho0 = 1000.0f; // Reference density
     //working constants
     const float k = 1.0f;    // Pressure stiffness
-    const float mu = 1.5f; 
+    const float mu = 10.5f; 
 
     //experimental constants
     // const float k = 2000.0f;    // Pressure stiffness

@@ -23,6 +23,7 @@ struct Particle {
     float density;
     float pressure;
     uint32_t hash_value;
+    bool outOfBox = false;
 
     std::vector<Particle*> neighbors;  
 

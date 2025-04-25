@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 
 
     sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
-    // sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
+    // sph.initialize_particles_cube(glm::vec3(0.0f, 2.0f, 0.0f), 0.2, 0.04/(scale ));
     
     sph.create_cuboid();
 
@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.2/scale;
+    const float sprite_size = 0.2;
 
     float radius = 5.0f;  // distance from center
     int frame_number = 0;
@@ -218,13 +218,13 @@ int main(int argc, char* argv[]) {
         if(mode == "render" || mode == "save"){
             spatialHash.build(sph.particles);
 
-            // float angle = glfwGetTime()/2.0f;
-            // cam_pos = glm::vec3(
-            //     radius * std::sin(angle),  // X
-            //     2.0f,                      // Y (height stays fixed)
-            //     radius * std::cos(angle)   // Z
-            // )/5.0f;
-            // cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
+            float angle = glfwGetTime()/2.0f;
+            cam_pos = glm::vec3(
+                radius * std::sin(angle),  // X
+                2.0f,                      // Y (height stays fixed)
+                radius * std::cos(angle)   // Z
+            )/5.0f;
+            cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             parallelNeighborQuery(sph, spatialHash, h);
     

@@ -6,14 +6,16 @@
 const glm::vec3 SPH::gravity(0.0f, -9.81f, 0.0f);
 
 SPH::SPH(float dt, float df, int count, float lx, float ly, float lz, glm::vec4 box_color): delta_time(dt), damping_factor(df),
-    lim_x(lx), lim_y(ly), lim_z(lz), particles(count, Particle {}), box_color(box_color) {}
+    lim_x(lx), lim_y(ly), lim_z(lz), buffer(count, Particle_buffer {}), box_color(box_color) {}
 
 void SPH::initialize_particles(glm::vec3 center, float radius) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0f, 1.0f);
 
-    for(auto& p: particles) {
+    for(auto& b: buffer) {
+        Particle p(b);
+
         float r = radius * std::cbrt(dist(gen));
         float theta = 2.0f * glm::pi<float>() * dist(gen);
         float phi = std::acos(1.0f - 2.0f * dist(gen));
@@ -43,20 +45,24 @@ void SPH::initialize_particles(glm::vec3 center, float radius) {
         );
         // p.density = rho0;
 
-        
+        particles.push_back(p);
     }
 }
 
 void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float spacing) {
     particles.clear();  // optional: clear existing particles
 
+    buffer.clear();
+
     int particles_per_axis = static_cast<int>(side_length / spacing);
     glm::vec3 start = center - glm::vec3(side_length) * 0.5f;
+
+    buffer.reserve(particles_per_axis * particles_per_axis * particles_per_axis);
 
     for (int x = 0; x < particles_per_axis; ++x) {
         for (int y = 0; y < particles_per_axis; ++y) {
             for (int z = 0; z < particles_per_axis; ++z) {
-                Particle p;
+                Particle p(buffer[x * particles_per_axis * particles_per_axis + y * particles_per_axis + z]);
                 p.position = start + glm::vec3(x, y, z) * spacing;
 
                 p.velocity = glm::vec3(0.0f);  // initial rest

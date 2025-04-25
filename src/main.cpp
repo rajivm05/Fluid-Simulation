@@ -97,14 +97,14 @@ int main() {
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sph.particles.size() * sizeof(Particle), sph.particles.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sph.buffer.size() * sizeof(Particle_buffer), sph.buffer.data(), GL_DYNAMIC_DRAW);
 
     // Position attribute
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle_buffer), (void*)offsetof(Particle_buffer, position));
     // Color attribute
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle_buffer), (void*)offsetof(Particle_buffer, color));
 
 
     //cuboid conditions
@@ -174,7 +174,7 @@ int main() {
 
         // Update buffer
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sph.particles.size() * sizeof(Particle), sph.particles.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sph.buffer.size() * sizeof(Particle_buffer), sph.buffer.data());
 
         glBindBuffer(GL_ARRAY_BUFFER, cVBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());

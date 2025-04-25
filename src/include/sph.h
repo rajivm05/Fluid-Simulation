@@ -16,6 +16,7 @@ private:
 
 public:
     std::vector<Particle> particles;
+    std::vector<Particle_buffer> buffer;
     std::vector<glm::vec3> box_positions;
     const glm::vec4 box_color;
 

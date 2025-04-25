@@ -79,15 +79,15 @@ int main() {
     // float delta_time = 0.0083f;
     float damping_factor = 0.4;
     int particle_count = 10000;
-    float scale = 1.0f;
+    float scale = 5.0f;
     float lim_x = 1.0f/scale;  
     float lim_y = 1.0f/pow(scale, 1.5);
     float lim_z = 1.0f/scale;
     glm::vec4 box_color = glm::vec4(0.0, 0.0, 0.0, 0.2);
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
-    sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
-    // sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
+    // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
+    sph.initialize_particles_cube(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale, 0.05/(scale ));
     
     sph.create_cuboid();
 

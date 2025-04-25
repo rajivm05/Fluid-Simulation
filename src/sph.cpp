@@ -57,7 +57,7 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
     int particles_per_axis = static_cast<int>(side_length / spacing);
     glm::vec3 start = center - glm::vec3(side_length) * 0.5f;
 
-    buffer.reserve(particles_per_axis * particles_per_axis * particles_per_axis);
+    buffer = std::vector<Particle_buffer>(particles_per_axis * particles_per_axis * particles_per_axis);
 
     for (int x = 0; x < particles_per_axis; ++x) {
         for (int y = 0; y < particles_per_axis; ++y) {

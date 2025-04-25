@@ -258,6 +258,16 @@ void SPH::create_cuboid(){
         glm::vec3(-lim_x,  lim_y, -lim_z),
         glm::vec3( lim_x,  lim_y,  lim_z),
         glm::vec3( lim_x,  lim_y, -lim_z),
+
+        // t11 - Front face
+        glm::vec3(-lim_x, -lim_y,  lim_z),
+        glm::vec3(-lim_x,  lim_y,  lim_z),
+        glm::vec3( lim_x,  lim_y,  lim_z),
+
+        // t12 - Front face
+        glm::vec3(-lim_x, -lim_y,  lim_z),
+        glm::vec3( lim_x,  lim_y,  lim_z),
+        glm::vec3( lim_x, -lim_y,  lim_z),
     };
     
 }

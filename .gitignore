@@ -1,5 +1,5 @@
 /build/
-
+/frames/
 CMakeCommands.txt
 CMakeWindows.txt
 compile_commands.json

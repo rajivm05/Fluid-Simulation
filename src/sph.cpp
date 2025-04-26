@@ -176,48 +176,78 @@ void SPH::boundary_conditions(float sprite_size) {
     float flim_y = lim_y - sprite_size;
     float flim_z = lim_z - sprite_size;
     for(auto& p: particles) {
-        if(p.outOfBox){
-            if(p.position.y < -flim_y) {
-                p.position.y = -flim_y;
-                p.velocity.y = -p.velocity.y * damping_factor;
-            }
+        // if(p.outOfBox){
+        //     if(p.position.y < -flim_y) {
+        //         p.position.y = -flim_y;
+        //         p.velocity.y = -p.velocity.y * damping_factor;
+        //     }
+        // }
+        // else{
+        //     if(p.position.y > flim_y + sprite_size && 
+        //         (p.position.x < -flim_x ||
+        //         p.position.x > flim_x ||
+        //         p.position.z < -flim_z ||
+        //         p.position.z > flim_z )) {
+        //         // p.position.y = flim_y;
+        //         // p.velocity.y = -p.velocity.y * damping_factor;
+        //         p.outOfBox = true;
+        //         continue;
+        //     }
+    
+        //     if(p.position.x < -flim_x) {
+        //         p.position.x = -flim_x;
+        //         p.velocity.x = -p.velocity.x * damping_factor;
+        //     }
+    
+        //     if(p.position.x > flim_x) {
+        //         p.position.x = flim_x;
+        //         p.velocity.x = -p.velocity.x * damping_factor;
+        //     }
+    
+        //     if(p.position.y < -flim_y) {
+        //         p.position.y = -flim_y;
+        //         p.velocity.y = -p.velocity.y * damping_factor;
+        //     }
+        //     if(p.position.z < -flim_z) {
+        //         p.position.z = -flim_z;
+        //         p.velocity.z = -p.velocity.z * damping_factor;
+        //     }
+    
+        //     if(p.position.z > flim_z) {
+        //         p.position.z = flim_z;
+        //         p.velocity.z = -p.velocity.z * damping_factor;
+        //     }
+        // }
+
+        if(p.position.y < -flim_y) {
+            p.position.y = -flim_y;
+            p.velocity.y = -p.velocity.y * damping_factor;
         }
-        else{
-            if(p.position.y > flim_y && 
-                (p.position.x < -flim_x ||
-                p.position.x > flim_x ||
-                p.position.z < -flim_z ||
-                p.position.z > flim_z )) {
-                // p.position.y = flim_y;
-                // p.velocity.y = -p.velocity.y * damping_factor;
-                p.outOfBox = true;
-                continue;
-            }
-    
-            if(p.position.x < -flim_x) {
-                p.position.x = -flim_x;
-                p.velocity.x = -p.velocity.x * damping_factor;
-            }
-    
-            if(p.position.x > flim_x) {
-                p.position.x = flim_x;
-                p.velocity.x = -p.velocity.x * damping_factor;
-            }
-    
-            if(p.position.y < -flim_y) {
-                p.position.y = -flim_y;
-                p.velocity.y = -p.velocity.y * damping_factor;
-            }
-            if(p.position.z < -flim_z) {
-                p.position.z = -flim_z;
-                p.velocity.z = -p.velocity.z * damping_factor;
-            }
-    
-            if(p.position.z > flim_z) {
-                p.position.z = flim_z;
-                p.velocity.z = -p.velocity.z * damping_factor;
-            }
+        if(p.position.x < -flim_x) {
+            p.position.x = -flim_x;
+            p.velocity.x = -p.velocity.x * damping_factor;
         }
+
+        if(p.position.x > flim_x) {
+            p.position.x = flim_x;
+            p.velocity.x = -p.velocity.x * damping_factor;
+        }
+
+        if(p.position.z < -flim_z) {
+            p.position.z = -flim_z;
+            p.velocity.z = -p.velocity.z * damping_factor;
+        }
+
+        if(p.position.z > flim_z) {
+            p.position.z = flim_z;
+            p.velocity.z = -p.velocity.z * damping_factor;
+        }
+        if(p.position.y > flim_y ) {
+            // p.position.y = flim_y;
+            // p.velocity.y = -p.velocity.y * damping_factor;
+        }
+
+
         
         
     }

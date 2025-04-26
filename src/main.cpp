@@ -11,6 +11,7 @@
 #include "particle.h"
 #include "camera.h"
 #include "sph.h"
+#include "frame.h"
 
 #include <thread>
 #include <chrono>
@@ -44,46 +45,68 @@ void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = 
         t.join();
 }
 
-std::vector<Particle_buffer> load_frame_data(const std::string& filename) {
-    std::ifstream in(filename, std::ios::binary | std::ios::ate);
-    if (!in) {
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
+std::tuple<FrameHeader, std::vector<Particle_buffer>> 
+load_frame_data(const std::string& filename) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) throw std::runtime_error("Can't open " + filename);
 
-    std::streamsize file_size = in.tellg();
-    in.seekg(0, std::ios::beg);
+    // Read header
+    FrameHeader header;
+    in.read(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
+    
+    // Validate
+    if (std::string(header.magic, 3) != "SPH") 
+        throw std::runtime_error("Invalid file format");
+    if (header.version != 2)
+        throw std::runtime_error("Unsupported version");
 
-    if (file_size % sizeof(Particle_buffer) != 0) {
-        throw std::runtime_error("File size does not match Particle struct size in " + filename);
-    }
+    // Read particles
+    std::vector<Particle_buffer> particles(header.particle_count);
+    in.read(reinterpret_cast<char*>(particles.data()), 
+           header.particle_count * sizeof(Particle_buffer));
 
-    std::cout << file_size << std::endl;
-
-    size_t count = file_size / sizeof(Particle_buffer);
-    std::cout << count << std::endl;
-    std::vector<Particle_buffer> particles(count);
-
-    if (!in.read((char*)(particles.data()), file_size)) {
-        throw std::runtime_error("Failed to read data from: " + filename);
-    }
-
-    return particles;
+    return {header, particles};
 }
 
-void save_frame_data(const std::vector<Particle_buffer>& particles, int frame_number, const std::string& prefix = "../frames/frame_") {
+void save_frame_data(SPH& sph, int frame_number, const Camera& cam, 
+    const std::string& prefix = "../frames/frame_") {
     std::ostringstream filename;
     filename << prefix << std::setw(4) << std::setfill('0') << frame_number << ".bin";
 
     std::ofstream out(filename.str(), std::ios::binary);
     if (!out) {
-        std::cerr << "Error: Could not open file for writing: " << filename.str() << std::endl;
-        return;
+    std::cerr << "Error opening: " << filename.str() << std::endl;
+    return;
     }
 
-    // Write the entire vector's data in one call
-    out.write(reinterpret_cast<const char*>(particles.data()), particles.size() * sizeof(Particle_buffer));
+    // Write header
+    FrameHeader header;
+    header.timestamp = frame_number * sph.delta_time;
+    header.particle_count = static_cast<uint32_t>(sph.particles.size());
+    header.h = sph.h;
+    header.dt = sph.delta_time;
+    header.view = cam.view;
+    header.projection = cam.projection;
+    header.gravity = SPH::gravity;
+    header.damping_factor = sph.damping_factor;
+    header.box_limits = glm::vec4(sph.lim_x, sph.lim_y, sph.lim_z, 5);
+
+    out.write(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
+
+    // Write particles
+    for (const auto& p : sph.buffer) {
+        Particle_buffer fp;
+        fp.position = p.position;
+        fp.density = p.density;
+        fp.velocity = p.velocity;
+        fp.pressure = p.pressure;
+        fp.color = p.color;
+        out.write(reinterpret_cast<char*>(&fp), sizeof(Particle_buffer));
+    }
+
     out.close();
 }
+
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -227,9 +250,6 @@ int main(int argc, char* argv[]) {
             cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             parallelNeighborQuery(sph, spatialHash, h);
-    
-//             sph.calculate_forces();
-//             sph.update_state(numThreads);
             sph.parallel(&SPH::update_properties);
             sph.parallel(&SPH::calculate_forces);
             sph.parallel(&SPH::update_state);
@@ -245,9 +265,8 @@ int main(int argc, char* argv[]) {
                 std::cout << frame_number <<std::endl;
                 filename << "../frames/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
                 std::cout << filename.str() <<std::endl;
+                auto [header, buffer] = load_frame_data(filename.str());
                 
-                auto buffer = load_frame_data(filename.str());
-                // std::cout << buffer[0].position.x <<std::endl;
                 // Update buffer
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, buffer.size() * sizeof(Particle_buffer), buffer.data());
@@ -268,7 +287,8 @@ int main(int argc, char* argv[]) {
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
         }
         else if(mode == "save"){
-            save_frame_data(sph.buffer, frame_number++);
+            // save_frame_data(sph.buffer, frame_number++);
+            save_frame_data(sph, frame_number++, cam);
             // return 0;
             continue;
         }

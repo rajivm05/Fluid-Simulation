@@ -95,6 +95,10 @@ void Shader::setVec2(const char* name, const glm::vec2& val) {
     glUniform2fv(glGetUniformLocation(ID, name), 1, glm::value_ptr(val));
 }
 
+void Shader::setVec3(const char* name, const glm::vec3& val) {
+    glUniform4fv(glGetUniformLocation(ID, name), 1, glm::value_ptr(val));
+}
+
 void Shader::setVec4(const char* name, const glm::vec4& val) {
     glUniform4fv(glGetUniformLocation(ID, name), 1, glm::value_ptr(val));
 }
@@ -102,3 +106,9 @@ void Shader::setVec4(const char* name, const glm::vec4& val) {
 void Shader::setFloat(const char* name, const float val) {
     glUniform1f(glGetUniformLocation(ID, name), val);
 }
+
+void Shader::setInt(const char* name, const int val){
+    glUniform1f(glGetUniformLocation(ID, name), val);
+
+}
+

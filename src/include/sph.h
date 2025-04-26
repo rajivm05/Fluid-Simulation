@@ -5,17 +5,14 @@
 
 class SPH {
 private:
+    int num_threads;
+public:
     float delta_time;
     float damping_factor;
-
+    static const glm::vec3 gravity;
     float lim_x;
     float lim_y;
     float lim_z;
-
-    static const glm::vec3 gravity;
-
-    int num_threads;
-public:
     std::vector<Particle> particles;
     std::vector<Particle_buffer> buffer;
     std::vector<glm::vec3> box_positions;
@@ -26,7 +23,7 @@ public:
     const float rho0 = 1000.0f; // Reference density
     //working constants
     const float k = 1.0f;    // Pressure stiffness
-    const float mu = 10.5f; 
+    const float mu = 1.5f; 
 
     //experimental constants
     // const float k = 2000.0f;    // Pressure stiffness

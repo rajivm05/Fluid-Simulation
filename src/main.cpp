@@ -148,14 +148,11 @@ int main(int argc, char* argv[]) {
     }
 
     std::string mode = argv[1];
-    // renderMode modeEnum;
-    // if(mode == "render"){
-    //     modeEnum = renderMode::render;
-    // }
     std::cout << mode << " mode" << std::endl;
 
     int numThreads = std::thread::hardware_concurrency();
     std::cout << "Using " << numThreads << " threads\n";
+
     const int width = 800;
     const int height = 600;
     const char* window_name = "Particles Array";
@@ -287,17 +284,9 @@ int main(int argc, char* argv[]) {
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
         }
         else if(mode == "save"){
-            // save_frame_data(sph.buffer, frame_number++);
             save_frame_data(sph, frame_number++, cam);
-            // return 0;
             continue;
-        }
-
-        
-
-
-        // Update buffer
-        
+        }        
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);

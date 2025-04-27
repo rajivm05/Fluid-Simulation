@@ -194,8 +194,8 @@ int main(int argc, char* argv[]) {
     SPH sph {delta_time, damping_factor, particle_count, lim_x, lim_y, lim_z, box_color};
 
 
-    sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
-    // sph.initialize_particles_cube(glm::vec3(0.0f, 2.0f, 0.0f), 0.2, 0.04/(scale ));
+    // sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
+    sph.initialize_particles_cube(glm::vec3(3.0f, 1.0f, 0.0f), 0.2, 0.08/(scale ));
     
     sph.create_cuboid();
 
@@ -227,18 +227,23 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
+    //mesh conditions
+    
+    
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
     std::cout << vendor << "\t" << renderer << std::endl;
-
+    
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
-
+    
     float h = 0.06f;
     SpatialHash spatialHash(2.0f*h);
-
+    
     float len_cube = h / 2.0f;
-    CubeMarch cm {lim_x, lim_y, lim_z, len_cube, h, &sph};
+    float iso_value = 0.5;
+    CubeMarch cm {lim_x, lim_y, lim_z, len_cube, h, &sph, iso_value};
+    int max_triangles = 5 * cm.cells.size();
 
     glm::vec3 cam_pos(5.0f/scale, 2.0f/scale, 5.0f/scale);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
@@ -249,7 +254,7 @@ int main(int argc, char* argv[]) {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.1;
+    const float sprite_size = 0.05;
 
     float radius = 5.0f;  // distance from center
     int frame_number = 0;
@@ -313,7 +318,11 @@ int main(int argc, char* argv[]) {
         else if(mode == "save"){
             save_frame_data(sph, frame_number++, cam);
             continue;
-        }        
+        }      
+        //render cube march stuff  
+        cm.MarchingCubes();
+
+
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -330,7 +339,7 @@ int main(int argc, char* argv[]) {
         cShader.use();
         cShader.setMatrix("view", cam.view);
         cShader.setMatrix("projection", cam.projection);
-        cShader.setVec4("box_color", sph.box_color);
+        cShader.setVec4("color", sph.box_color);
         glBindVertexArray(cVAO);
         glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
 

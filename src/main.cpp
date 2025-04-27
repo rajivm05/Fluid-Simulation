@@ -12,6 +12,7 @@
 #include "camera.h"
 #include "sph.h"
 #include "frame.h"
+#include "CubeMarch.h"
 
 #include <thread>
 #include <chrono>
@@ -29,6 +30,16 @@ void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start,
         sh.queryNeighbors(particles[i].position, particles[i].neighbors, 2 * h);
 }
 
+void threadedQueryCM(SpatialHash& sh, std::vector<std::vector<std::vector<CubeCell>>>& cells, int start, int end, float h) {
+    for (int i = start; i < end; ++i) {
+        for(int j = 0; j < cells[i].size(); j++) {
+            for(int k = 0; k < cells[i][j].size(); k++) {
+                sh.queryNeighbors(cells[i][j][k].position, cells[i][j][k].neighbors, 2 * h);
+            }
+        }
+    }
+}
+
 void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
     int N = sph.particles.size();
     int chunk = (N + numThreads - 1) / numThreads;
@@ -39,6 +50,22 @@ void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = 
         int start = t * chunk;
         int end = std::min(N, start + chunk);
         threads.emplace_back(threadedQuery, std::ref(sh), std::ref(sph.particles), start, end, h);
+    }
+
+    for (auto& t : threads)
+        t.join();
+}
+
+void parallelNeighborQueryCM(CubeMarch& cm, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
+    int N = cm.cells.size();
+    int chunk = (N + numThreads - 1) / numThreads;
+
+    std::vector<std::thread> threads;
+
+    for (int t = 0; t < numThreads; ++t) {
+        int start = t * chunk;
+        int end = std::min(N, start + chunk);
+        threads.emplace_back(threadedQueryCM, std::ref(sh), std::ref(cm.cells), start, end, h);
     }
 
     for (auto& t : threads)
@@ -217,6 +244,9 @@ int main(int argc, char* argv[]) {
         p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
     }
 
+    float len_cube = h / 2.0f;
+    CubeMarch cm {lim_x, lim_y, lim_z, len_cube};
+
     glm::vec3 cam_pos(5.0f/scale, 2.0f/scale, 5.0f/scale);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
     glm::vec3 cam_up(0.0f, 1.0f, 0.0f);
@@ -226,7 +256,7 @@ int main(int argc, char* argv[]) {
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
 
-    const float sprite_size = 0.2;
+    const float sprite_size = 0.1;
 
     float radius = 5.0f;  // distance from center
     int frame_number = 0;
@@ -247,6 +277,8 @@ int main(int argc, char* argv[]) {
             cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             parallelNeighborQuery(sph, spatialHash, h);
+            parallelNeighborQueryCM(cm, spatialHash, h);
+
             sph.parallel(&SPH::update_properties);
             sph.parallel(&SPH::calculate_forces);
             sph.parallel(&SPH::update_state);

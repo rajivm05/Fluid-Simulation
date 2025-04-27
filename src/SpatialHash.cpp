@@ -106,10 +106,9 @@ void SpatialHash::build(std::vector<Particle>& particles) {
 }
 
 void SpatialHash::queryNeighbors(
-    Particle& particle, float radius) const 
+    glm::vec3 pos, std::vector<Particle*>& neighbors, float radius) const 
 {
-    std::vector<Particle*> neighbors;
-    const glm::ivec3 baseCell = positionToCell(particle.position);
+    const glm::ivec3 baseCell = positionToCell(pos);
     const int searchRadius = static_cast<int>(std::ceil(radius / m_cellSize));
 
     for(int dx = -searchRadius; dx <= searchRadius; ++dx) {
@@ -125,8 +124,8 @@ void SpatialHash::queryNeighbors(
                 while(i < m_sortedParticles.size() && 
                       computeHash(positionToCell(m_sortedParticles[i]->position)) == hash) 
                 {
-                    if(glm::distance(particle.position, m_sortedParticles[i]->position) <= radius) {
-                        particle.neighbors.push_back(m_sortedParticles[i]);
+                    if(glm::distance(pos, m_sortedParticles[i]->position) <= radius) {
+                        neighbors.push_back(m_sortedParticles[i]);
                     }
                     ++i;
                 }

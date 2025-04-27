@@ -26,7 +26,7 @@
 
 void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start, int end, float h) {
     for (int i = start; i < end; ++i)
-        sh.queryNeighbors(particles[i], 2 * h);
+        sh.queryNeighbors(particles[i].position, particles[i].neighbors, 2 * h);
 }
 
 void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {

@@ -38,6 +38,6 @@ public:
     SpatialHash& operator=(const SpatialHash&) = delete;
 
     void build(std::vector<Particle>& particles);
-    void queryNeighbors(Particle& particle, float radius) const;
+    void queryNeighbors(glm::vec3 pos, std::vector<Particle*>& neighbors, float radius) const;
     glm::ivec3 positionToCell(const glm::vec3& pos) const;
 };

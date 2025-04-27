@@ -17,7 +17,7 @@ CubeMarch::CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smo
     int iter = 0;
     for(int i = 0; i < nx; i++) {
         for(int j = 0; j < ny; j++) {
-            for(int k = 0; k < nx; k++) {
+            for(int k = 0; k < nz; k++) {
                 cells[iter].position = (trans_mat * glm::vec4(i * len_cube, j * len_cube, k * len_cube, 1.0f));
                 iter++;
             }

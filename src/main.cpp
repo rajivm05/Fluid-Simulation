@@ -30,13 +30,9 @@ void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start,
         sh.queryNeighbors(particles[i].position, particles[i].neighbors, 2 * h);
 }
 
-void threadedQueryCM(SpatialHash& sh, std::vector<std::vector<std::vector<CubeCell>>>& cells, int start, int end, float h) {
-    for (int i = start; i < end; ++i) {
-        for(int j = 0; j < cells[i].size(); j++) {
-            for(int k = 0; k < cells[i][j].size(); k++) {
-                sh.queryNeighbors(cells[i][j][k].position, cells[i][j][k].neighbors, 2 * h);
-            }
-        }
+void threadedQueryCM(SpatialHash& sh, std::vector<CubeCell>& cells, int start, int end, float h) {
+    for(int i = start; i < end; ++i) {
+        sh.queryNeighbors(cells[i].position, cells[i].neighbors, 2 * h);
     }
 }
 
@@ -240,12 +236,9 @@ int main(int argc, char* argv[]) {
 
     float h = 0.06f;
     SpatialHash spatialHash(2.0f*h);
-    for(auto& p: sph.particles){
-        p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
-    }
 
     float len_cube = h / 2.0f;
-    CubeMarch cm {lim_x, lim_y, lim_z, len_cube};
+    CubeMarch cm {lim_x, lim_y, lim_z, len_cube, h, &sph};
 
     glm::vec3 cam_pos(5.0f/scale, 2.0f/scale, 5.0f/scale);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
@@ -266,6 +259,9 @@ int main(int argc, char* argv[]) {
     while(max_frames-- >= 0){
         std::cout << max_frames <<std::endl;
         if(mode == "render" || mode == "save"){
+            for(auto& p: sph.particles){
+                p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
+            }
             spatialHash.build(sph.particles);
 
             float angle = glfwGetTime()/2.0f;
@@ -283,9 +279,8 @@ int main(int argc, char* argv[]) {
             sph.parallel(&SPH::calculate_forces);
             sph.parallel(&SPH::update_state);
             sph.boundary_conditions(sprite_size/(scale + 1));
-            for(auto& p: sph.particles){
-                p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
-            }
+
+            cm.parallel(&CubeMarch::update_color);
         }
 
         if(mode == "load"){

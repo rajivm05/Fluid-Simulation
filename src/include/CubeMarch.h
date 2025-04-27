@@ -2,6 +2,7 @@
 #include <thread>
 
 #include "particle.h"
+#include "sph.h"
 
 struct CubeCell {
     glm::vec3 position;
@@ -20,18 +21,14 @@ private:
     int num_threads;
     float h;
 
-    const float poly6_const = 315 / (64 * glm::pi<float>() * glm::pow(h, 9));
+    SPH* sph;
 
 public:
-    std::vector<std::vector<std::vector<CubeCell>>> cells;
+    // std::vector<std::vector<std::vector<CubeCell>>> cells;
+    std::vector<CubeCell> cells;
 
-    CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist): len_cube(len),
-                                                    nx(2 * lim_x / len + 1),
-                                                    ny(2 * lim_y / len + 1),
-                                                    nz(2 * lim_z / len + 1), 
-                                                    cells(std::vector(nx, std::vector(ny, std::vector(nz, CubeCell {})))),
-                                                    num_threads(std::thread::hardware_concurrency()),
-                                                    h(smoothing_dist) {}
+    CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr);
+    void update_color(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
 
     template <typename Func, typename... Args>
     void parallel(Func&& func, Args&&... args) {

@@ -38,6 +38,11 @@ void CubeMarch::update_color(std::vector<CubeCell>::iterator begin, std::vector<
     }
 }
 
+void CubeMarch::load_triangles(const std::vector<glm::vec3>& loaded_triangles)
+{
+    this->triangles = loaded_triangles;
+}
+
 int CubeMarch::cube_index(int i, int j, int k) {
     return i * ny * nz + j * nz + k;
 }

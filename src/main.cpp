@@ -31,19 +31,14 @@ enum class RenderMode {
     load
 };
 
-void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start, int end, float h) {
-    for (int i = start; i < end; ++i)
-        sh.queryNeighbors(particles[i].position, particles[i].neighbors);
-}
-
 void threadedQueryCM(SpatialHash& sh, std::vector<CubeCell>& cells, int start, int end, float h) {
     for(int i = start; i < end; ++i) {
         sh.queryNeighbors(cells[i].position, cells[i].neighbors);
     }
 }
 
-void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
-    int N = sph.particles.size();
+void parallelNeighborQueryCM(CubeMarch* cm, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
+    int N = cm->cells.size();
     int chunk = (N + numThreads - 1) / numThreads;
 
     std::vector<std::thread> threads;
@@ -51,23 +46,7 @@ void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = 
     for (int t = 0; t < numThreads; ++t) {
         int start = t * chunk;
         int end = std::min(N, start + chunk);
-        threads.emplace_back(threadedQuery, std::ref(sh), std::ref(sph.particles), start, end, h);
-    }
-
-    for (auto& t : threads)
-        t.join();
-}
-
-void parallelNeighborQueryCM(CubeMarch& cm, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
-    int N = cm.cells.size();
-    int chunk = (N + numThreads - 1) / numThreads;
-
-    std::vector<std::thread> threads;
-
-    for (int t = 0; t < numThreads; ++t) {
-        int start = t * chunk;
-        int end = std::min(N, start + chunk);
-        threads.emplace_back(threadedQueryCM, std::ref(sh), std::ref(cm.cells), start, end, h);
+        threads.emplace_back(threadedQueryCM, std::ref(sh), std::ref(cm->cells), start, end, h);
     }
 
     for (auto& t : threads)
@@ -100,7 +79,7 @@ load_frame_data(const std::string& filename) {
     return {header, particles, triangles};
 }
 
-void save_frame_data(SPH& sph, CubeMarch& cm, int frame_number, const Camera& cam, 
+void save_frame_data(SPH& sph, CubeMarch* cm, int frame_number, const Camera& cam, 
     const std::string& prefix = "../frames/frame_") {
     std::ostringstream filename;
     filename << prefix << std::setw(4) << std::setfill('0') << frame_number << ".bin";
@@ -122,9 +101,9 @@ void save_frame_data(SPH& sph, CubeMarch& cm, int frame_number, const Camera& ca
     header.gravity = sph.gravity;
     header.damping_factor = sph.damping_factor;
     header.box_limits = glm::vec4(sph.lim_x, sph.lim_y, sph.lim_z, 5);
-    header.cube_len = cm.len_cube;
-    header.iso_value = cm.iso_value;
-    header.triangle_count = cm.triangles.size();
+    header.cube_len = cm->len_cube;
+    header.iso_value = cm->iso_value;
+    header.triangle_count = cm->triangles.size();
 
     out.write(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
 
@@ -139,7 +118,7 @@ void save_frame_data(SPH& sph, CubeMarch& cm, int frame_number, const Camera& ca
         out.write(reinterpret_cast<char*>(&fp), sizeof(Particle_buffer));
     }
 
-    out.write(reinterpret_cast<const char*>(cm.triangles.data()), cm.triangles.size() * sizeof(glm::vec3));
+    out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
 
     out.close();
 }
@@ -177,11 +156,13 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
-        std::cerr << "Usage: ./simulator [render|save|load]" << std::endl;
+        std::cerr << "Usage: ./simulator [render|save|load] [true|false]" << std::endl;
         return 1;
     }
 
+
     std::string mode_s = argv[1];
+    std::string march_s = argv[2];
     RenderMode mode;
     if(mode_s == "render") { mode = RenderMode::render; }
     else if(mode_s == "save") { mode = RenderMode::save; }
@@ -191,6 +172,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     std::cout << mode_s << " mode" << std::endl;
+    bool turnOnMarchingCubes;
+    if(march_s == "true")
+        turnOnMarchingCubes = true;
+    else
+        turnOnMarchingCubes = false;
 
     int numThreads = std::thread::hardware_concurrency();
     std::cout << "Using " << numThreads << " threads\n";
@@ -207,12 +193,10 @@ int main(int argc, char* argv[]) {
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
     SpatialHash spatialHash(2.0f*h, h);
     SPH sph {h, lim_x, lim_y, lim_z, sprite_size, spatialHash};
-    
-    // CubeMarch cm {2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value};
-    // int max_triangles = 5 * cm.cells.size();
+    CubeMarch* cm = nullptr;
 
-    sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
-    // sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
+    // sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
+    sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
     
     sph.create_cuboid();
 
@@ -244,16 +228,24 @@ int main(int argc, char* argv[]) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
     // Mesh
-    // GLuint tVAO, tVBO;
-    // glGenVertexArrays(1, &tVAO);
-    // glGenBuffers(1, &tVBO);
-    // glBindVertexArray(tVAO);
-    // glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-    // glBufferData(GL_ARRAY_BUFFER, max_triangles * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+    GLuint tVAO, tVBO;
+    glGenVertexArrays(1, &tVAO);
+    glGenBuffers(1, &tVBO);
+    glBindVertexArray(tVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, tVBO);
+    if(turnOnMarchingCubes)
+    {
+        cm = new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value};
+        int max_triangles = 5 * cm->cells.size();
+        glBufferData(GL_ARRAY_BUFFER, max_triangles * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+    }
+    else{  
+        glBufferData(GL_ARRAY_BUFFER, 0 * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+    }
 
-    // // Position attribute
-    // glEnableVertexAttribArray(0);
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    // Position attribute
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     
     float radius = 5.0f;  // distance from center
     int frame_number = 0;
@@ -261,7 +253,7 @@ int main(int argc, char* argv[]) {
 
     // while (!glfwWindowShouldClose(window)) {
     while(max_frames-- >= 0){
-        // std::cout << max_frames <<std::endl;
+        std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
             for(auto& p: sph.particles){
                 p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
@@ -277,15 +269,17 @@ int main(int argc, char* argv[]) {
             // cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             sph.parallel(&SPH::update_neighbors);
-            // parallelNeighborQuery(sph, spatialHash, h);
-            // parallelNeighborQueryCM(cm, spatialHash, h);
+            
+            if(turnOnMarchingCubes)
+            parallelNeighborQueryCM(cm, spatialHash, h);
 
             sph.parallel(&SPH::update_properties);
             sph.parallel(&SPH::calculate_forces);
             sph.parallel(&SPH::update_state);
             sph.parallel(&SPH::boundary_conditions);
-
-            // cm.parallel(&CubeMarch::update_color);
+            
+            if(turnOnMarchingCubes)
+            cm->parallel(&CubeMarch::update_color);
         }
 
         if(mode == RenderMode::load){
@@ -295,7 +289,7 @@ int main(int argc, char* argv[]) {
                 filename << "../frames/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
                 std::cout << filename.str() <<std::endl;
                 auto [header, buffer, triangles] = load_frame_data(filename.str());
-                // cm.load_triangles(triangles);
+                cm->load_triangles(triangles);
 
                 // Update buffer
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -315,19 +309,20 @@ int main(int argc, char* argv[]) {
 
             glBindBuffer(GL_ARRAY_BUFFER, cVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
-            // cm.MarchingCubes();
+            if(turnOnMarchingCubes)
+            cm->MarchingCubes();
 
         }
         else if(mode == RenderMode::save){
-            // cm.MarchingCubes();
-            // save_frame_data(sph, cm, frame_number++, cam);
+            cm->MarchingCubes();
+            save_frame_data(sph, cm, frame_number++, cam);
             continue;
         }      
 
         //render cube march stuff  
-
-        // glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-        // glBufferSubData(GL_ARRAY_BUFFER, 0, cm.triangles.size() * sizeof(glm::vec3), cm.triangles.data());
+        if(turnOnMarchingCubes)
+        {glBindBuffer(GL_ARRAY_BUFFER, tVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());}
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -345,9 +340,10 @@ int main(int argc, char* argv[]) {
         cShader.setMatrix("view", cam.view);
         cShader.setMatrix("projection", cam.projection);
 
-        // cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-        // glBindVertexArray(tVAO);
-        // glDrawArrays(GL_TRIANGLES, 0, cm.triangles.size());  
+        if(turnOnMarchingCubes)
+        {cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+        glBindVertexArray(tVAO);
+        glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());}
 
         cShader.setVec4("color", sph.box_color);
         glBindVertexArray(cVAO);
@@ -359,11 +355,13 @@ int main(int argc, char* argv[]) {
 
     glDeleteVertexArrays(1, &VAO);
     glDeleteVertexArrays(1, &cVAO);
-    // glDeleteVertexArrays(1, &tVAO);
+    glDeleteVertexArrays(1, &tVAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &cVBO);
-    // glDeleteBuffers(1, &tVBO);
+    glDeleteBuffers(1, &tVBO);
     glDeleteProgram(shader.ID);
+
+    delete cm;
 
     glfwTerminate();
     return 0;

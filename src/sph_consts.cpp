@@ -34,8 +34,8 @@ namespace main_c {
 
     // Cube Particle Initialization
     const glm::vec3 cube_center(0.0f, 0.0f, 0.0f);
-    const float cube_side_length = l / 2;
-    const float cube_spacing = l / 10;
+    const float cube_side_length = l / 1;
+    const float cube_spacing = l / 40;
 
     // SPH Constants
     const float len_cube = h / 4.0f;

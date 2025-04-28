@@ -10,11 +10,9 @@ void SPH::initialize_particles_sphere(int count, glm::vec3 center, float radius)
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0f, 1.0f);
 
-    buffer = std::vector<Particle_buffer>(count);
+    particles = std::vector<Particle>(count);
 
-    for(auto& b: buffer) {
-        Particle p(b);
-
+    for(auto& p: particles) {
         float r = radius * std::cbrt(dist(gen));
         float theta = 2.0f * glm::pi<float>() * dist(gen);
         float phi = std::acos(1.0f - 2.0f * dist(gen));
@@ -38,8 +36,6 @@ void SPH::initialize_particles_sphere(int count, glm::vec3 center, float radius)
             240.0f / 255,
             0.8f
         );
-
-        particles.push_back(p);
     }
 }
 
@@ -50,12 +46,12 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.5f, 1.0f);
 
-    buffer = std::vector<Particle_buffer>(particles_per_axis * particles_per_axis * particles_per_axis);
+    particles = std::vector<Particle>(particles_per_axis * particles_per_axis * particles_per_axis);
 
     for (int x = 0; x < particles_per_axis; ++x) {
         for (int y = 0; y < particles_per_axis; ++y) {
             for (int z = 0; z < particles_per_axis; ++z) {
-                Particle p(buffer[x * particles_per_axis * particles_per_axis + y * particles_per_axis + z]);
+                Particle& p = particles[x * particles_per_axis * particles_per_axis + y * particles_per_axis + z];
                 p.position = start + glm::vec3(x, y, z) * spacing;
 
                 // p.velocity = glm::vec3(0.0f);  // initial rest
@@ -66,8 +62,6 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
                     240.0f / 255.0f,
                     0.8f
                 );
-
-                particles.push_back(p);
             }
         }
     }
@@ -132,9 +126,6 @@ void SPH::calculate_forces(std::vector<Particle>::iterator begin, std::vector<Pa
         pi.acceleration = gravity;
         pi.acceleration += pressure_force / pi.density  ;
         pi.acceleration += viscosity_force / pi.density ;
-
-        // CONFIRM whether this is needed or not
-        // pi.neighbors.clear();
     }
 }
 

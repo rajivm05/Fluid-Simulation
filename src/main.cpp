@@ -108,7 +108,7 @@ void save_frame_data(SPH& sph, CubeMarch* cm, int frame_number, const Camera& ca
     out.write(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
 
     // Write particles
-    for (const auto& p : sph.buffer) {
+    for (const auto& p : sph.particles) {
         Particle_buffer fp;
         fp.position = p.position;
         fp.density = p.density;
@@ -211,14 +211,14 @@ int main(int argc, char* argv[]) {
     glGenBuffers(1, &VBO);
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sph.buffer.size() * sizeof(Particle_buffer), sph.buffer.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sph.particles.size() * sizeof(Particle), sph.particles.data(), GL_DYNAMIC_DRAW);
 
     // Position attribute
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle_buffer), (void*)offsetof(Particle_buffer, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, position));
     // Color attribute
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle_buffer), (void*)offsetof(Particle_buffer, color));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Particle), (void*)offsetof(Particle, color));
 
     // Container
     GLuint cVAO, cVBO;
@@ -297,7 +297,7 @@ int main(int argc, char* argv[]) {
 
                 // Update buffer
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, buffer.size() * sizeof(Particle_buffer), buffer.data());
+                glBufferSubData(GL_ARRAY_BUFFER, 0, buffer.size() * sizeof(Particle), buffer.data());
 
                 glBindBuffer(GL_ARRAY_BUFFER, cVBO);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
@@ -309,7 +309,7 @@ int main(int argc, char* argv[]) {
         }
         else if(mode == RenderMode::render){
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, sph.buffer.size() * sizeof(Particle_buffer), sph.buffer.data());
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sph.particles.size() * sizeof(Particle), sph.particles.data());
 
             glBindBuffer(GL_ARRAY_BUFFER, cVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
@@ -339,7 +339,7 @@ int main(int argc, char* argv[]) {
         shader.setVec2("screen_size", glm::vec2(width, height));
         shader.setFloat("sprite_size", sprite_size);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, sph.buffer.size());
+        glDrawArrays(GL_POINTS, 0, sph.particles.size());
 
         cShader.use();
         cShader.setMatrix("view", cam.view);

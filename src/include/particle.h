@@ -15,17 +15,42 @@ struct Particle_buffer {
 #pragma pack(pop)
 
 struct Particle {
-    glm::vec3& position;
-    glm::vec4& color;   
-    glm::vec3& velocity;
+    glm::vec3 position;
+    glm::vec4 color;   
+    glm::vec3 velocity;
     glm::vec3 acceleration;
-    float& density;
-    float& pressure;
+    float density;
+    float pressure;
     uint32_t hash_value;
-    bool outOfBox = false;
 
     std::vector<Particle*> neighbors;  
 
-    Particle(Particle_buffer& pb): position(pb.position), color(pb.color), density(pb.density), pressure(pb.pressure), velocity(pb.velocity) {}
+    Particle() = default;
+
+    Particle(const Particle& p)
+        : position(p.position),
+          color(p.color),
+          velocity(p.velocity),
+          acceleration(p.acceleration),
+          density(p.density),
+          pressure(p.pressure),
+          hash_value(p.hash_value),
+          neighbors() {}
+
+    Particle& operator=(const Particle& p) {
+        position = p.position;
+        color = p.color;   
+        velocity = p.velocity;
+        acceleration = p.acceleration;
+        density = p.density;
+        pressure = p.pressure;
+        hash_value = p.hash_value;
+
+        return *this;
+    }
+
+    Particle(Particle&&) = default;
+    Particle& operator=(Particle&&) = default;
 };
+
 #endif

@@ -35,7 +35,6 @@ public:
     SpatialHash& sp_hash;
 
     std::vector<Particle> particles;
-    std::vector<Particle_buffer> buffer;
     std::vector<glm::vec3> box_positions;
 
     SPH(float smoothing_dist, float lx, float ly, float lz, float sp_size, SpatialHash& sh);

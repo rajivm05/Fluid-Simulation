@@ -1,13 +1,8 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
-#include <cmath>
 #include <vector>
-#include <iostream>
 #include <glm/glm.hpp>
-#include "glm/gtc/matrix_transform.hpp"
 
 #pragma pack(push, 1) // No padding
 struct Particle_buffer {
@@ -20,7 +15,6 @@ struct Particle_buffer {
 #pragma pack(pop)
 
 
-// Particle struct with position, velocity, and color
 struct Particle {
     glm::vec3& position;
     glm::vec4& color;   

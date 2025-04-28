@@ -284,7 +284,7 @@ int main(int argc, char* argv[]) {
 
                 glBindBuffer(GL_ARRAY_BUFFER, cVBO);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
-                // std::this_thread::sleep_for(std::chrono::duration<float>(1.0f / 30.0f));
+                std::this_thread::sleep_for(std::chrono::duration<float>(1.0f / 30.0f));
     
             } catch (const std::exception& e) {
                 std::cerr << "Loading failed: " << e.what() << std::endl;

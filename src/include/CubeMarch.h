@@ -20,12 +20,7 @@ struct Triangle{
 
 class CubeMarch {
 private:
-    int nx;
-    int ny;
-    int nz;
-    int iso_value;
-
-    float len_cube;
+    
 
     int num_threads;
     float h;
@@ -35,6 +30,12 @@ private:
     static int triTable[256][16];
 
 public:
+    int nx;
+    int ny;
+    int nz;
+    int iso_value;
+
+    float len_cube;
     // std::vector<std::vector<std::vector<CubeCell>>> cells;
     std::vector<CubeCell> cells;
     // std::vector<std::vector<glm::vec3[3]>> triangles;
@@ -48,6 +49,7 @@ public:
 
 
     void update_color(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
+    void load_triangles(const std::vector<glm::vec3>& loaded_triangles);
 
     template <typename Func, typename... Args>
     void parallel(Func&& func, Args&&... args) {

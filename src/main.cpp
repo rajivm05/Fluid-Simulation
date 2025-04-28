@@ -74,7 +74,7 @@ void parallelNeighborQueryCM(CubeMarch& cm, SpatialHash& sh, float h, int numThr
         t.join();
 }
 
-std::tuple<FrameHeader, std::vector<Particle_buffer>> 
+std::tuple<FrameHeader, std::vector<Particle_buffer> , std::vector<glm::vec3>>
 load_frame_data(const std::string& filename) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) throw std::runtime_error("Can't open " + filename);
@@ -86,7 +86,7 @@ load_frame_data(const std::string& filename) {
     // Validate
     if (std::string(header.magic, 3) != "SPH") 
         throw std::runtime_error("Invalid file format");
-    if (header.version != 2)
+    if (header.version != 3)
         throw std::runtime_error("Unsupported version");
 
     // Read particles
@@ -94,10 +94,13 @@ load_frame_data(const std::string& filename) {
     in.read(reinterpret_cast<char*>(particles.data()), 
            header.particle_count * sizeof(Particle_buffer));
 
-    return {header, particles};
+    std::vector<glm::vec3> triangles(header.triangle_count);
+    in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
+
+    return {header, particles, triangles};
 }
 
-void save_frame_data(SPH& sph, int frame_number, const Camera& cam, 
+void save_frame_data(SPH& sph, CubeMarch& cm, int frame_number, const Camera& cam, 
     const std::string& prefix = "../frames/frame_") {
     std::ostringstream filename;
     filename << prefix << std::setw(4) << std::setfill('0') << frame_number << ".bin";
@@ -119,6 +122,9 @@ void save_frame_data(SPH& sph, int frame_number, const Camera& cam,
     header.gravity = sph.gravity;
     header.damping_factor = sph.damping_factor;
     header.box_limits = glm::vec4(sph.lim_x, sph.lim_y, sph.lim_z, 5);
+    header.cube_len = cm.len_cube;
+    header.iso_value = cm.iso_value;
+    header.triangle_count = cm.triangles.size();
 
     out.write(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
 
@@ -132,6 +138,8 @@ void save_frame_data(SPH& sph, int frame_number, const Camera& cam,
         fp.color = p.color;
         out.write(reinterpret_cast<char*>(&fp), sizeof(Particle_buffer));
     }
+
+    out.write(reinterpret_cast<const char*>(cm.triangles.data()), cm.triangles.size() * sizeof(glm::vec3));
 
     out.close();
 }
@@ -251,8 +259,8 @@ int main(int argc, char* argv[]) {
     int frame_number = 0;
     int max_frames = 1800;
 
-    while (!glfwWindowShouldClose(window)) {
-    // while(max_frames-- >= 0){
+    // while (!glfwWindowShouldClose(window)) {
+    while(max_frames-- >= 0){
         // std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
             for(auto& p: sph.particles){
@@ -286,15 +294,16 @@ int main(int argc, char* argv[]) {
                 std::cout << frame_number <<std::endl;
                 filename << "../frames/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
                 std::cout << filename.str() <<std::endl;
-                auto [header, buffer] = load_frame_data(filename.str());
-                
+                auto [header, buffer, triangles] = load_frame_data(filename.str());
+                // cm.load_triangles(triangles);
+
                 // Update buffer
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, buffer.size() * sizeof(Particle_buffer), buffer.data());
 
                 glBindBuffer(GL_ARRAY_BUFFER, cVBO);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
-                std::this_thread::sleep_for(std::chrono::duration<float>(1.0f / 30.0f));
+                // std::this_thread::sleep_for(std::chrono::duration<float>(1.0f / 30.0f));
     
             } catch (const std::exception& e) {
                 std::cerr << "Loading failed: " << e.what() << std::endl;
@@ -306,13 +315,16 @@ int main(int argc, char* argv[]) {
 
             glBindBuffer(GL_ARRAY_BUFFER, cVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
+            // cm.MarchingCubes();
+
         }
         else if(mode == RenderMode::save){
-            save_frame_data(sph, frame_number++, cam);
+            // cm.MarchingCubes();
+            // save_frame_data(sph, cm, frame_number++, cam);
             continue;
         }      
 
-        // cm.MarchingCubes();
+        //render cube march stuff  
 
         // glBindBuffer(GL_ARRAY_BUFFER, tVBO);
         // glBufferSubData(GL_ARRAY_BUFFER, 0, cm.triangles.size() * sizeof(glm::vec3), cm.triangles.data());

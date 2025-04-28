@@ -5,11 +5,11 @@
 namespace main_c {
 
     // Screen Constants
-    const int width = 800;
-    const int height = 600;
+    int width = 800;
+    int height = 600;
     const char* window_name = "Particles Array";
 
-    const float l = 2.0f;
+    const float l = 0.5f;
 
     // Camera Constants
     glm::vec3 cam_pos(2*l, 1.5*l, 4.5*l);
@@ -37,8 +37,8 @@ namespace main_c {
     const float cube_side_length = l / 2;
     const float cube_spacing = l / 10;
 
-    // SPH Constants
-    const float len_cube = h / 4.0f;
+    // CM Constants
+    const float len_cube = h / 2.0f;
     const float iso_value = 0.5;
 
     const float sprite_size = l / 6;

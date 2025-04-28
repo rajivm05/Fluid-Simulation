@@ -31,31 +31,10 @@ enum class RenderMode {
     load
 };
 
-void threadedQuery(SpatialHash& sh, std::vector<Particle>& particles, int start, int end, float h) {
-    for (int i = start; i < end; ++i)
-        sh.queryNeighbors(particles[i].position, particles[i].neighbors);
-}
-
 void threadedQueryCM(SpatialHash& sh, std::vector<CubeCell>& cells, int start, int end, float h) {
     for(int i = start; i < end; ++i) {
         sh.queryNeighbors(cells[i].position, cells[i].neighbors);
     }
-}
-
-void parallelNeighborQuery(SPH& sph, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
-    int N = sph.particles.size();
-    int chunk = (N + numThreads - 1) / numThreads;
-
-    std::vector<std::thread> threads;
-
-    for (int t = 0; t < numThreads; ++t) {
-        int start = t * chunk;
-        int end = std::min(N, start + chunk);
-        threads.emplace_back(threadedQuery, std::ref(sh), std::ref(sph.particles), start, end, h);
-    }
-
-    for (auto& t : threads)
-        t.join();
 }
 
 void parallelNeighborQueryCM(CubeMarch& cm, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
@@ -145,6 +124,8 @@ void save_frame_data(SPH& sph, CubeMarch& cm, int frame_number, const Camera& ca
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    main_c::width = width;
+    main_c::height = width;
     glViewport(0, 0, width, height);
 }
 
@@ -205,7 +186,7 @@ int main(int argc, char* argv[]) {
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
-    SpatialHash spatialHash(2.0f*h, h);
+    SpatialHash spatialHash(h);
     SPH sph {h, lim_x, lim_y, lim_z, sprite_size, spatialHash};
     
     // CubeMarch cm {2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value};
@@ -251,7 +232,7 @@ int main(int argc, char* argv[]) {
     // glBindBuffer(GL_ARRAY_BUFFER, tVBO);
     // glBufferData(GL_ARRAY_BUFFER, max_triangles * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
 
-    // // Position attribute
+    // Position attribute
     // glEnableVertexAttribArray(0);
     // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
     

@@ -17,7 +17,7 @@ private:
 public:
     uint32_t computeHash(const glm::ivec3& cell) const;
 
-    SpatialHash(float cellSize, float smoothing_dist, uint32_t tableSize = 262144);
+    SpatialHash(float smoothing_dist, uint32_t tableSize = 262144);
     ~SpatialHash();
 
     // Prevent copying

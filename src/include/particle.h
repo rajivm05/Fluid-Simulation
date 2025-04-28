@@ -14,7 +14,6 @@ struct Particle_buffer {
 };
 #pragma pack(pop)
 
-
 struct Particle {
     glm::vec3& position;
     glm::vec4& color;   

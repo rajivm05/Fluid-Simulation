@@ -3,8 +3,8 @@
 #include <glm/glm.hpp>
 
 namespace main_c {
-    extern const int width;
-    extern const int height;
+    extern int width;
+    extern int height;
     extern const char* window_name;
 
     extern glm::vec3 cam_pos;

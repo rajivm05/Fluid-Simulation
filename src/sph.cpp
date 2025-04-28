@@ -46,6 +46,9 @@ void SPH::initialize_particles_sphere(int count, glm::vec3 center, float radius)
 void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float spacing) {
     int particles_per_axis = static_cast<int>(side_length / spacing);
     glm::vec3 start = center - glm::vec3(side_length) * 0.5f;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dist(0.5f, 1.0f);
 
     buffer = std::vector<Particle_buffer>(particles_per_axis * particles_per_axis * particles_per_axis);
 
@@ -55,7 +58,8 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
                 Particle p(buffer[x * particles_per_axis * particles_per_axis + y * particles_per_axis + z]);
                 p.position = start + glm::vec3(x, y, z) * spacing;
 
-                p.velocity = glm::vec3(0.0f);  // initial rest
+                // p.velocity = glm::vec3(0.0f);  // initial rest
+                p.velocity = glm::vec3(0.01 * dist(gen), 0.01 * dist(gen), 0.01 * dist(gen));
                 p.color = glm::vec4(
                     62.0f / 255.0f,
                     164.0f / 255.0f,

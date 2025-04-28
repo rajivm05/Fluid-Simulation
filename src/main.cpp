@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
     sph.initialize_particles(glm::vec3(0.0f, 0.0f, 0.0f), 0.5/scale);
     // sph.initialize_particles_cube(glm::vec3(3.0f, 1.0f, 0.0f), 0.2, 0.08/(scale ));
     
-    sph.create_cuboid();
+    // sph.create_cuboid();
 
     // VAO and VBO setup
     GLuint VAO, VBO;
@@ -237,8 +237,8 @@ int main(int argc, char* argv[]) {
     float h = 0.06f;
     SpatialHash spatialHash(2.0f*h);
     
-    float len_cube = h / 4.0f;
-    float iso_value = 0.5;
+    float len_cube = h / 5.0f;
+    float iso_value = 0.99;
     CubeMarch cm {2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value};
     int max_triangles = 5 * cm.cells.size();
 
@@ -271,30 +271,30 @@ int main(int argc, char* argv[]) {
 
     // while (!glfwWindowShouldClose(window)) {
     while(max_frames-- >= 0){
-        // std::cout << max_frames <<std::endl;
+        std::cout << max_frames <<std::endl;
         if(mode == "render" || mode == "save"){
             for(auto& p: sph.particles){
                 p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
             }
             spatialHash.build(sph.particles);
 
-            float angle = glfwGetTime()/2.0f;
-            cam_pos = glm::vec3(
-                radius * std::sin(angle),  // X
-                2.0f,                      // Y (height stays fixed)
-                radius * std::cos(angle)   // Z
-            )/5.0f;
-            cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
+            // float angle = glfwGetTime()/2.0f;
+            // cam_pos = glm::vec3(
+            //     radius * std::sin(angle),  // X
+            //     2.0f,                      // Y (height stays fixed)
+            //     radius * std::cos(angle)   // Z
+            // )/5.0f;
+            // cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             parallelNeighborQuery(sph, spatialHash, h);
-            parallelNeighborQueryCM(cm, spatialHash, h);
+            // parallelNeighborQueryCM(cm, spatialHash, h);
 
             sph.parallel(&SPH::update_properties);
             sph.parallel(&SPH::calculate_forces);
             sph.parallel(&SPH::update_state);
             sph.boundary_conditions(sprite_size/(scale + 1));
 
-            cm.parallel(&CubeMarch::update_color);
+            // cm.parallel(&CubeMarch::update_color);
         }
 
         if(mode == "load"){
@@ -330,10 +330,10 @@ int main(int argc, char* argv[]) {
         }      
 
         //render cube march stuff  
-        cm.MarchingCubes();
+        // cm.MarchingCubes();
 
-        glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, cm.triangles.size() * sizeof(glm::vec3), cm.triangles.data());
+        // glBindBuffer(GL_ARRAY_BUFFER, tVBO);
+        // glBufferSubData(GL_ARRAY_BUFFER, 0, cm.triangles.size() * sizeof(glm::vec3), cm.triangles.data());
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -351,9 +351,9 @@ int main(int argc, char* argv[]) {
         cShader.setMatrix("view", cam.view);
         cShader.setMatrix("projection", cam.projection);
 
-        cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-        glBindVertexArray(tVAO);
-        glDrawArrays(GL_TRIANGLES, 0, cm.triangles.size());  
+        // cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+        // glBindVertexArray(tVAO);
+        // glDrawArrays(GL_TRIANGLES, 0, cm.triangles.size());  
 
         cShader.setVec4("color", sph.box_color);
         glBindVertexArray(cVAO);

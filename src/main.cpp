@@ -227,9 +227,6 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
-    //mesh conditions
-    
-    
     const GLubyte* vendor = glGetString(GL_VENDOR);
     const GLubyte* renderer = glGetString(GL_RENDERER);
     std::cout << vendor << "\t" << renderer << std::endl;
@@ -240,11 +237,23 @@ int main(int argc, char* argv[]) {
     float h = 0.06f;
     SpatialHash spatialHash(2.0f*h);
     
-    float len_cube = h / 2.0f;
+    float len_cube = h / 5.0f;
     float iso_value = 0.5;
     CubeMarch cm {lim_x, lim_y, lim_z, len_cube, h, &sph, iso_value};
     int max_triangles = 5 * cm.cells.size();
 
+    //mesh conditions
+    GLuint tVAO, tVBO;
+    glGenVertexArrays(1, &tVAO);
+    glGenBuffers(1, &tVBO);
+    glBindVertexArray(tVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, tVBO);
+    glBufferData(GL_ARRAY_BUFFER, max_triangles * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+
+    // Position attribute
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    
     glm::vec3 cam_pos(5.0f/scale, 2.0f/scale, 5.0f/scale);
     glm::vec3 cam_target(0.0f, 0.0f, 0.0f);
     glm::vec3 cam_up(0.0f, 1.0f, 0.0f);
@@ -262,7 +271,7 @@ int main(int argc, char* argv[]) {
 
     // while (!glfwWindowShouldClose(window)) {
     while(max_frames-- >= 0){
-        std::cout << max_frames <<std::endl;
+        // std::cout << max_frames <<std::endl;
         if(mode == "render" || mode == "save"){
             for(auto& p: sph.particles){
                 p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
@@ -319,10 +328,12 @@ int main(int argc, char* argv[]) {
             save_frame_data(sph, frame_number++, cam);
             continue;
         }      
+
         //render cube march stuff  
         cm.MarchingCubes();
 
-
+        glBindBuffer(GL_ARRAY_BUFFER, tVBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, cm.triangles.size() * sizeof(glm::vec3), cm.triangles.data());
 
         // Draw
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -339,6 +350,14 @@ int main(int argc, char* argv[]) {
         cShader.use();
         cShader.setMatrix("view", cam.view);
         cShader.setMatrix("projection", cam.projection);
+
+        // cShader.use();
+        // cShader.setMatrix("view", cam.view);
+        // cShader.setMatrix("projection", cam.projection);
+        cShader.setVec4("color", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+        glBindVertexArray(tVAO);
+        glDrawArrays(GL_TRIANGLES, 0, cm.triangles.size());  
+
         cShader.setVec4("color", sph.box_color);
         glBindVertexArray(cVAO);
         glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  

@@ -1,4 +1,5 @@
 #include "CubeMarch.h"
+#include <bitset>
 
 CubeMarch::CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv):
                                                     len_cube(len),
@@ -42,7 +43,7 @@ int CubeMarch::cube_index(int i, int j, int k) {
 }
 
 glm::vec3 CubeMarch::vertex_interpolation(float iso_value, int p1, int p2) {
-    if(fabs(cells[p1].color - cells[p2].color < 1e-6)) return cells[p1].position;
+    if(fabs(cells[p1].color - cells[p2].color) < 1e-6) { return cells[p1].position; }
     float mu = (iso_value - cells[p1].color )/ (cells[p2].color - cells[p1].color);
     return cells[p1].position + mu*(cells[p2].position - cells[p1].position);
 }
@@ -54,17 +55,17 @@ void CubeMarch::MarchingCubes(){
         for(int j = 0; j<ny-1; j++){
             for(int k = 0; k<nz - 1; k++){
                 int cute_indices[8];
-                for(int i =0; i<8; i++){
-                    int dx = i        & 1;
-                    int dy = (i >> 1) & 1;
-                    int dz = (i >> 2) & 1;
-                    cute_indices[i] = cube_index(i+dx, j+dy, k+dz);
+                for(int m =0; m<8; m++){
+                    int dx = m        & 1;
+                    int dy = (m >> 1) & 1;
+                    int dz = (m >> 2) & 1;
+                    cute_indices[m] = cube_index(i+dx, j+dy, k+dz);
                 }
 
                 int table_index = 0;
                 for(int i = 0; i<8; i++){
                     // if()
-                    if(cells[cute_indices[i]].color > iso_value) table_index |= (1<<i);
+                    if(cells[cute_indices[i]].color > iso_value) { table_index |= (1<<i); }
                 }
                 if(edgeTable[table_index] == 0) continue;
                 glm::vec3 vertList[12];
@@ -97,7 +98,7 @@ void CubeMarch::MarchingCubes(){
                 for(int i = 0; triTable[table_index][i] != -1; i+=3){
                     glm::vec3 v0 = vertList[triTable[table_index][i]];
                     glm::vec3 v1 = vertList[triTable[table_index][i+1]];
-                    glm::vec3 v2 = vertList[triTable[table_index][i+1]];
+                    glm::vec3 v2 = vertList[triTable[table_index][i+2]];
                     // triangles.push_back(Triangle{v0, v1, v2});
                     triangles.push_back(v0);
                     triangles.push_back(v1);

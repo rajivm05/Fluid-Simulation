@@ -31,8 +31,10 @@ enum class RenderMode {
     load
 };
 
-std::tuple<FrameHeader, std::vector<Particle_buffer> , std::vector<glm::vec3>>
-load_frame_data(const std::string& filename) {
+// std::tuple<FrameHeader, std::vector<Particle_buffer> , std::vector<glm::vec3>>
+// load_frame_data(const std::string& filename) {
+    std::tuple<FrameHeader, std::vector<Particle>, std::vector<glm::vec3>>
+    load_frame_data(const std::string& filename, bool load_cube_marching = true){
     std::ifstream in(filename, std::ios::binary);
     if (!in) throw std::runtime_error("Can't open " + filename);
 
@@ -47,18 +49,26 @@ load_frame_data(const std::string& filename) {
         throw std::runtime_error("Unsupported version");
 
     // Read particles
-    std::vector<Particle_buffer> particles(header.particle_count);
+    std::vector<Particle> particles(header.particle_count);
     in.read(reinterpret_cast<char*>(particles.data()), 
-           header.particle_count * sizeof(Particle_buffer));
+           header.particle_count * sizeof(Particle));
 
-    std::vector<glm::vec3> triangles(header.triangle_count);
-    in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
+    // std::vector<glm::vec3> triangles(header.triangle_count);
+    // in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
+    std::vector<glm::vec3> triangles;
+    if (load_cube_marching && header.triangle_count > 0) {
+        triangles.resize(header.triangle_count);
+        in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
+    }
 
     return {header, particles, triangles};
 }
 
-void save_frame_data(SPH& sph, std::unique_ptr<CubeMarch>& cm, int frame_number, const Camera& cam, 
-    const std::string& prefix = "../frames/frame_") {
+// void save_frame_data(SPH& sph, std::unique_ptr<CubeMarch>& cm, int frame_number, const Camera& cam, 
+//     const std::string& prefix = "../frames_marchoffphongoff/frame_") {
+    void save_frame_data(SPH& sph, std::unique_ptr<CubeMarch>& cm, int frame_number, const Camera& cam, 
+        const std::string& prefix = "../frames_marchonphongoff/frame_", 
+        bool save_cube_marching = true){
     std::ostringstream filename;
     filename << prefix << std::setw(4) << std::setfill('0') << frame_number << ".bin";
 
@@ -79,24 +89,34 @@ void save_frame_data(SPH& sph, std::unique_ptr<CubeMarch>& cm, int frame_number,
     header.gravity = sph.gravity;
     header.damping_factor = sph.damping_factor;
     header.box_limits = glm::vec4(sph.lim_x, sph.lim_y, sph.lim_z, 5);
-    header.cube_len = cm->len_cube;
-    header.iso_value = cm->iso_value;
-    header.triangle_count = cm->triangles.size();
+    
+    // header.cube_len = cm->len_cube;
+    // header.iso_value = cm->iso_value;
+    // header.triangle_count = cm->triangles.size();
+    header.triangle_count = (save_cube_marching) ? cm->triangles.size() : 0;
 
     out.write(reinterpret_cast<char*>(&header), sizeof(FrameHeader));
 
     // Write particles
+    // for (const auto& p : sph.particles) {
+    //     Particle_buffer fp;
+    //     fp.position = p.position;
+    //     fp.density = p.density;
+    //     fp.velocity = p.velocity;
+    //     fp.pressure = p.pressure;
+    //     fp.color = p.color;
+    //     out.write(reinterpret_cast<char*>(&fp), sizeof(Particle_buffer));
+    // }
     for (const auto& p : sph.particles) {
-        Particle_buffer fp;
-        fp.position = p.position;
-        fp.density = p.density;
-        fp.velocity = p.velocity;
-        fp.pressure = p.pressure;
-        fp.color = p.color;
-        out.write(reinterpret_cast<char*>(&fp), sizeof(Particle_buffer));
+        Particle p_copy = p;
+        out.write(reinterpret_cast<char*>(&p_copy), sizeof(Particle));
+
     }
 
-    out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
+    // out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
+    if (save_cube_marching) {
+        out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
+    }
 
     out.close();
 }
@@ -137,14 +157,28 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
 
 int main(int argc, char* argv[]) {
     if(argc < 4) {
-        std::cerr << "Usage: ./simulator [render|save|load] [true|false] [true|false]" << std::endl;
+        std::cerr << "Usage: ./simulator Render Mode:[render|save|load] Remeshing:[true|false] Phong Shading:[true|false]" << std::endl;
         return 1;
     }
 
     std::string mode_s = argv[1];
     std::string march_s = argv[2];
     std::string phong_s = argv[3];
-
+    std::string march_status = "";
+    std::string phong_status = "";
+    if(march_s == "true"){
+        march_status = "on";
+    }
+    else{
+        march_status = "off";
+    }
+    if(phong_s == "true"){
+        phong_status = "on";
+    }
+    else{
+        phong_status = "off";
+    }
+    std::string save_location = "march" + march_status + "phong" + phong_status;
     RenderMode mode;
     if(mode_s == "render") { mode = RenderMode::render; }
     else if(mode_s == "save") { mode = RenderMode::save; }
@@ -260,9 +294,9 @@ int main(int argc, char* argv[]) {
     int frame_number = 0;
     int max_frames = 1800;
 
-    while (!glfwWindowShouldClose(window)) {
-    // while(max_frames-- >= 0){
-        // std::cout << max_frames <<std::endl;
+    // while (!glfwWindowShouldClose(window)) {
+    while(max_frames-- >= 0){
+        std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
             sph.parallel(&SPH::update_hash);
             spatialHash.build(sph.particles);
@@ -290,9 +324,10 @@ int main(int argc, char* argv[]) {
             try {
                 std::ostringstream filename;
                 std::cout << frame_number <<std::endl;
-                filename << "../frames/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
+                filename << "../frames_" << save_location << "/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
                 std::cout << filename.str() <<std::endl;
-                auto [header, buffer, triangles] = load_frame_data(filename.str());
+                // auto [header, buffer, triangles] = load_frame_data(filename.str());
+                auto [header, buffer, triangles] = load_frame_data(filename.str(), /*load_cube_marching=*/turnOnMarchingCubes);
                 if(turnOnMarchingCubes) { cm->load_triangles(triangles); }
 
                 // Update buffer
@@ -318,8 +353,10 @@ int main(int argc, char* argv[]) {
 
         }
         else if(mode == RenderMode::save){
-            cm->MarchingCubes();
-            save_frame_data(sph, cm, frame_number++, cam);
+            // cm->MarchingCubes();
+            if(turnOnMarchingCubes) { cm->MarchingCubes(); }
+            // save_frame_data(sph, cm, frame_number++, cam);
+            save_frame_data(sph, cm, frame_number++, cam, "../frames_"+ save_location+"/frame_", turnOnMarchingCubes);
             continue;
         }      
 

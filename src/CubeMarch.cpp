@@ -1,4 +1,5 @@
 #include "CubeMarch.h"
+#include <iostream>
 
 CubeMarch::CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv, SpatialHash& sh):
                                                     len_cube(len),
@@ -112,7 +113,7 @@ void CubeMarch::march_cubes(int begin, int end, std::unordered_map<Edge, std::pa
                 Edge edgeSave[12];
                 for(int m = 0; m < 12; m++) {
                     if(edgeList & (1 << m)) {
-                        Edge e {corners[edgeMap[i][0]], corners[edgeMap[i][1]]};
+                        Edge e {corners[edgeMap[m][0]], corners[edgeMap[m][1]]};
                         edgeSave[m] = e;
 
                         auto f = local_map_i.find(e);
@@ -134,7 +135,7 @@ void CubeMarch::march_cubes(int begin, int end, std::unordered_map<Edge, std::pa
                     
                     glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
                     
-                    Edge e0 = edgeSave[triList[m]]; 
+                    Edge e0 = edgeSave[triList[m  ]]; 
                     Edge e1 = edgeSave[triList[m+1]]; 
                     Edge e2 = edgeSave[triList[m+2]]; 
 
@@ -167,13 +168,12 @@ void CubeMarch::MarchingCubes() {
 
         threads.emplace_back(
             [this, begin, end, i, &local_triangles, &local_maps]() {
-                this->march_cubes(begin, end, local_maps[i], local_triangles[i]);
+                march_cubes(begin, end, local_maps[i], local_triangles[i]);
             }
         );
     }
 
     for(auto& t: threads) { t.join(); }
-
     std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash> global_map {};
     for(auto& local_map_i: local_maps) {
         for(auto& m: local_map_i) {

@@ -398,17 +398,17 @@ int main(int argc, char* argv[]) {
                 cShader.use();
                 cShader.setMatrix("view", cam.view);
                 cShader.setMatrix("projection", cam.projection);
-                cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+                cShader.setVec4("color", glm::vec4(62.0f / 255.0f, 164.0f / 255.0f, 240.0f / 255.0f, 0.8f));
                 glBindVertexArray(tVAO);
                 glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
             } else {
                 phongShader.use();
                 phongShader.setMatrix("view", cam.view);
                 phongShader.setMatrix("projection", cam.projection);
-                phongShader.setVec3("lightPos", cam_pos);
+                phongShader.setVec3("lightPos", cam_pos + glm::vec3(0.0f, 8.0f, 0.0f));
                 phongShader.setVec3("viewPos", cam_pos);
-                phongShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-                phongShader.setVec3("objectColor", glm::vec3(0.0f, 0.0f, 1.0f));
+                phongShader.setVec3("lightColor", glm::vec3(0.5f, 0.5f, 0.5f));
+                phongShader.setVec3("objectColor", glm::vec3(62.0f / 255.0f, 164.0f / 255.0f, 240.0f / 255.0f));
                 glBindVertexArray(tVAO);
                 glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
             }

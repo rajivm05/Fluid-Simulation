@@ -214,11 +214,13 @@ int main(int argc, char* argv[]) {
     GLuint tVAO, tVBO;
     glGenVertexArrays(1, &tVAO);
     glGenBuffers(1, &tVBO);
+
+    // Cube March grid particles
     GLuint mVAO, mVBO;
     glGenVertexArrays(1, &mVAO);
     glGenBuffers(1, &mVBO);
-    if(turnOnMarchingCubes)
-    {
+
+    if(turnOnMarchingCubes) {
         cm.reset(new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, cm_h, &sph, iso_value, spatialHash});
         int max_triangles = 5 * cm->cells.size();
 
@@ -230,16 +232,16 @@ int main(int argc, char* argv[]) {
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
 
-        glBindVertexArray(mVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, mVBO);
-        glBufferData(GL_ARRAY_BUFFER, cm->cells.size() * sizeof(CubeCell), cm->cells.data(), GL_DYNAMIC_DRAW);
+        // glBindVertexArray(mVAO);
+        // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
+        // glBufferData(GL_ARRAY_BUFFER, cm->cells.size() * sizeof(CubeCell), cm->cells.data(), GL_DYNAMIC_DRAW);
 
-        // Position attribute
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, position));
-        // Color attribute
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, color));
+        // // Position attribute
+        // glEnableVertexAttribArray(0);
+        // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, position));
+        // // Color attribute
+        // glEnableVertexAttribArray(1);
+        // glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, color));
     }
     
     float radius = 5.0f;  // distance from center
@@ -250,10 +252,6 @@ int main(int argc, char* argv[]) {
     // while(max_frames-- >= 0){
         // std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
-            // for(auto& p: sph.particles){
-            //     p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
-            // }
-
             sph.parallel(&SPH::update_hash);
             spatialHash.build(sph.particles);
 
@@ -318,8 +316,8 @@ int main(int argc, char* argv[]) {
             glBindBuffer(GL_ARRAY_BUFFER, tVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());
 
-            glBindBuffer(GL_ARRAY_BUFFER, mVBO);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, cm->cells.size() * sizeof(CubeCell), cm->cells.data());
+            // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
+            // glBufferSubData(GL_ARRAY_BUFFER, 0, cm->cells.size() * sizeof(CubeCell), cm->cells.data());
         }
 
         // Draw
@@ -348,6 +346,7 @@ int main(int argc, char* argv[]) {
         // mShader.setMatrix("projection", cam.projection);
         // mShader.setVec2("screen_size", glm::vec2(width, height));
         // mShader.setFloat("sprite_size", 0.01);
+        // mShader.setFloat("iso_value", iso_value);
         // glBindVertexArray(mVAO);
         // glDrawArrays(GL_POINTS, 0, cm->cells.size());
 
@@ -365,9 +364,11 @@ int main(int argc, char* argv[]) {
     glDeleteVertexArrays(1, &VAO);
     glDeleteVertexArrays(1, &cVAO);
     glDeleteVertexArrays(1, &tVAO);
+    glDeleteVertexArrays(1, &mVAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &cVBO);
     glDeleteBuffers(1, &tVBO);
+    glDeleteBuffers(1, &mVBO);
     glDeleteProgram(shader.ID);
 
     glfwTerminate();

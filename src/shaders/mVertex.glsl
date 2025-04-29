@@ -8,6 +8,7 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform vec2 screen_size;
 uniform float sprite_size;
+uniform float iso_value;
 
 void main() {
     vec4 view_space = view * vec4(position, 1.0);
@@ -17,5 +18,9 @@ void main() {
     gl_PointSize = 0.5 * (screen_sprite.x + screen_sprite.y);
     gl_Position = projection * view_space;
 
-    vColor = color / 15000.0 * vec4(1.0f, 0.0f, 0.0f, 1.0f) + (1 - color / 15000.0) * vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    if(color > iso_value) {
+        vColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    } else {
+        vColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    }
 }

@@ -1,15 +1,12 @@
 #include "CubeMarch.h"
-#include <iostream>
 
 CubeMarch::CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv, SpatialHash& sh):
                                                     len_cube(len),
                                                     nx(2 * lim_x / len + 1),
                                                     ny(2 * lim_y / len + 1),
                                                     nz(2 * lim_z / len + 1), 
-                                                    // cells(std::vector(nx, std::vector(ny, std::vector(nz, CubeCell {})))),
                                                     cells(nx * ny * nz, CubeCell {}),
-                                                    // num_threads(std::thread::hardware_concurrency()),
-                                                    num_threads(1),
+                                                    num_threads(std::thread::hardware_concurrency()),
                                                     h(smoothing_dist),
                                                     sph(sph_ptr),
                                                     iso_value(iv), 
@@ -34,13 +31,10 @@ void CubeMarch::update_color(std::vector<CubeCell>::iterator begin, std::vector<
         auto& c = *i;
 
         c.color = 0.0f;
-        // for(auto& p: sph->particles) {
-        //     c.color += sph->mass / p.density * sph->poly6(c.position - p.position, h);
-        // }
-
         for(auto p: c.neighbors) {
+            if(p->density == 0.0) { continue; }
+
             c.color += sph->mass / p->density * sph->poly6(c.position - p->position, h);
-            // std::cout << sph->poly6(c.position - p->position, h) << std::endl;
         }
     }
 }
@@ -64,10 +58,18 @@ int CubeMarch::cube_index(int i, int j, int k) {
 }
 
 glm::vec3 CubeMarch::vertex_interpolation(float iso_value, int p1, int p2) {
-    if(fabs(cells[p1].color - cells[p2].color) < 1e-6) { return cells[p1].position; }
+    const glm::vec3 v1 = cells[p1].position;
+    const glm::vec3 v2 = cells[p2].position;
 
-    float mu = (iso_value - cells[p1].color) / (cells[p2].color - cells[p1].color);
-    return cells[p1].position + mu * (cells[p2].position - cells[p1].position);
+    const float c1 = cells[p1].color;
+    const float c2 = cells[p2].color;
+
+    if(std::abs(iso_value - c1) < 1e-5) { return v1; }
+    if(std::abs(iso_value - c2) < 1e-5) { return v2; }
+    if(std::abs(c1 - c2) < 1e-5) { return v1; }
+
+    float mu = (iso_value - c1) / (c2 - c1);
+    return v1 + mu * (v2 - v1);
 }
 
 void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
@@ -75,51 +77,40 @@ void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
         for(int j = 0; j < ny - 1; j++){
             for(int k = 0; k < nz - 1; k++){
                 int corners[8];
-                for(int m = 0; m < 8; m++) {
-                    int dx = m        & 1;
-                    int dy = (m >> 1) & 1;
-                    int dz = (m >> 2) & 1;
-                    corners[m] = cube_index(i + dx, j + dy, k + dz);
-                }
+                corners[0] = cube_index(i    , j    , k    );
+                corners[1] = cube_index(i + 1, j    , k    );
+                corners[2] = cube_index(i + 1, j    , k + 1);
+                corners[3] = cube_index(i    , j    , k + 1);
+                corners[4] = cube_index(i    , j + 1, k    );
+                corners[5] = cube_index(i + 1, j + 1, k    );
+                corners[6] = cube_index(i + 1, j + 1, k + 1);
+                corners[7] = cube_index(i    , j + 1, k + 1);
 
                 int table_index = 0;
                 for(int m = 0; m < 8; m++){
                     if(cells[corners[m]].color > iso_value) { table_index |= (1 << m); }
-                    // std::cout << cells[corners[m]].color << std::endl;
                 }
-                
+
                 int edgeList = edgeTable[table_index];
                 if(edgeList == 0) { continue; }
 
                 glm::vec3 vertList[12];
-                if(edgeList & 1)
-                    vertList[0] = vertex_interpolation(iso_value, corners[0], corners[1]);
-                if(edgeList & 2)
-                    vertList[1] = vertex_interpolation(iso_value, corners[1], corners[2]);
-                if(edgeList & 4)
-                    vertList[2] = vertex_interpolation(iso_value, corners[2], corners[3]);
-                if(edgeList & 8)
-                    vertList[3] = vertex_interpolation(iso_value, corners[3], corners[0]);
-                if(edgeList & 16)
-                    vertList[4] = vertex_interpolation(iso_value, corners[4], corners[5]);
-                if(edgeList & 32)
-                    vertList[5] = vertex_interpolation(iso_value, corners[5], corners[6]);
-                if(edgeList & 64)
-                    vertList[6] = vertex_interpolation(iso_value, corners[6], corners[7]);
-                if(edgeList & 128)
-                    vertList[7] = vertex_interpolation(iso_value, corners[7], corners[4]);
-                if(edgeList & 256)
-                    vertList[8] = vertex_interpolation(iso_value, corners[0], corners[4]);
-                if(edgeList & 512)
-                    vertList[9] = vertex_interpolation(iso_value, corners[1], corners[5]);
-                if(edgeList & 1024)
-                    vertList[10] = vertex_interpolation(iso_value, corners[2], corners[6]);
-                if(edgeList & 2048)
-                    vertList[11] = vertex_interpolation(iso_value, corners[3], corners[7]);
+                if(edgeList &    1) { vertList[0]  = vertex_interpolation(iso_value, corners[0], corners[1]); }
+                if(edgeList &    2) { vertList[1]  = vertex_interpolation(iso_value, corners[1], corners[2]); }
+                if(edgeList &    4) { vertList[2]  = vertex_interpolation(iso_value, corners[2], corners[3]); }
+                if(edgeList &    8) { vertList[3]  = vertex_interpolation(iso_value, corners[3], corners[0]); }
+                if(edgeList &   16) { vertList[4]  = vertex_interpolation(iso_value, corners[4], corners[5]); }
+                if(edgeList &   32) { vertList[5]  = vertex_interpolation(iso_value, corners[5], corners[6]); }
+                if(edgeList &   64) { vertList[6]  = vertex_interpolation(iso_value, corners[6], corners[7]); }
+                if(edgeList &  128) { vertList[7]  = vertex_interpolation(iso_value, corners[7], corners[4]); }
+                if(edgeList &  256) { vertList[8]  = vertex_interpolation(iso_value, corners[0], corners[4]); }
+                if(edgeList &  512) { vertList[9]  = vertex_interpolation(iso_value, corners[1], corners[5]); }
+                if(edgeList & 1024) { vertList[10] = vertex_interpolation(iso_value, corners[2], corners[6]); }
+                if(edgeList & 2048) { vertList[11] = vertex_interpolation(iso_value, corners[3], corners[7]); }
 
                 int* triList = triTable[table_index];
                 for(int m = 0; triList[m] != -1; m += 3){
-                    glm::vec3 v0 = vertList[triList[m]];
+                    glm::vec3 v0 = vertList[triList[m  ]];
                     glm::vec3 v1 = vertList[triList[m+1]];
                     glm::vec3 v2 = vertList[triList[m+2]];
 

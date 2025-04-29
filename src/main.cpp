@@ -128,6 +128,7 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -135,13 +136,14 @@ GLFWwindow* gl_init(const int width, const int height, const char* window_name) 
 }
 
 int main(int argc, char* argv[]) {
-    if(argc < 3) {
-        std::cerr << "Usage: ./simulator [render|save|load] [true|false]" << std::endl;
+    if(argc < 4) {
+        std::cerr << "Usage: ./simulator [render|save|load] [true|false] [true|false]" << std::endl;
         return 1;
     }
 
     std::string mode_s = argv[1];
     std::string march_s = argv[2];
+    std::string phong_s = argv[3];
 
     RenderMode mode;
     if(mode_s == "render") { mode = RenderMode::render; }
@@ -158,6 +160,11 @@ int main(int argc, char* argv[]) {
         turnOnMarchingCubes = true;
     } else {
         turnOnMarchingCubes = false;
+    }
+
+    bool turnOnPhongShading = false;
+    if(phong_s == "true") {
+        turnOnPhongShading = true;
     }
 
     int numThreads = std::thread::hardware_concurrency();
@@ -179,8 +186,8 @@ int main(int argc, char* argv[]) {
     SPH sph {h, lim_x, lim_y, lim_z, sprite_size, spatialHash};
     std::unique_ptr<CubeMarch> cm = nullptr;
 
-    sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
-    // sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
+    // sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
+    sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
     
     sph.create_cuboid();
 
@@ -339,31 +346,35 @@ int main(int argc, char* argv[]) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // shader.use();
-        // shader.setMatrix("view", cam.view);
-        // shader.setMatrix("projection", cam.projection);
-        // shader.setVec2("screen_size", glm::vec2(width, height));
-        // shader.setFloat("sprite_size", sprite_size);
-        // glBindVertexArray(VAO);
-        // glDrawArrays(GL_POINTS, 0, sph.particles.size());
+        if(!turnOnMarchingCubes) {
+            shader.use();
+            shader.setMatrix("view", cam.view);
+            shader.setMatrix("projection", cam.projection);
+            shader.setVec2("screen_size", glm::vec2(width, height));
+            shader.setFloat("sprite_size", sprite_size);
+            glBindVertexArray(VAO);
+            glDrawArrays(GL_POINTS, 0, sph.particles.size());
+        }
 
         if(turnOnMarchingCubes) {
-            cShader.use();
-            cShader.setMatrix("view", cam.view);
-            cShader.setMatrix("projection", cam.projection);
-            cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-            glBindVertexArray(tVAO);
-            glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
-
-            // phongShader.use();
-            // phongShader.setMatrix("view", cam.view);
-            // phongShader.setMatrix("projection", cam.projection);
-            // phongShader.setVec3("lightPos", cam_pos);
-            // phongShader.setVec3("viewPos", cam_pos);
-            // phongShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-            // phongShader.setVec3("objectColor", glm::vec3(0.0f, 0.0f, 1.0f));
-            // glBindVertexArray(tVAO);
-            // glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
+            if(!turnOnPhongShading) {
+                cShader.use();
+                cShader.setMatrix("view", cam.view);
+                cShader.setMatrix("projection", cam.projection);
+                cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+                glBindVertexArray(tVAO);
+                glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
+            } else {
+                phongShader.use();
+                phongShader.setMatrix("view", cam.view);
+                phongShader.setMatrix("projection", cam.projection);
+                phongShader.setVec3("lightPos", cam_pos);
+                phongShader.setVec3("viewPos", cam_pos);
+                phongShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+                phongShader.setVec3("objectColor", glm::vec3(0.0f, 0.0f, 1.0f));
+                glBindVertexArray(tVAO);
+                glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
+            }
         }
 
         // mShader.use();
@@ -375,12 +386,14 @@ int main(int argc, char* argv[]) {
         // glBindVertexArray(mVAO);
         // glDrawArrays(GL_POINTS, 0, cm->cells.size());
 
-        // cShader.use();
-        // cShader.setMatrix("view", cam.view);
-        // cShader.setMatrix("projection", cam.projection);
-        // cShader.setVec4("color", sph.box_color);
-        // glBindVertexArray(cVAO);
-        // glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
+        // if(!turnOnMarchingCubes) {
+        cShader.use();
+        cShader.setMatrix("view", cam.view);
+        cShader.setMatrix("projection", cam.projection);
+        cShader.setVec4("color", sph.box_color);
+        glBindVertexArray(cVAO);
+        glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
+        // }
 
         glfwSwapBuffers(window);
         glfwPollEvents();

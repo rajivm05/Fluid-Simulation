@@ -55,7 +55,7 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
                 p.position = start + glm::vec3(x, y, z) * spacing;
 
                 // p.velocity = glm::vec3(0.0f);  // initial rest
-                p.velocity = glm::vec3(0.01 * dist(gen), 0.01 * dist(gen), 0.01 * dist(gen));
+                p.velocity = glm::vec3(0.01 * dist(gen), -1.0 + 0.01 * dist(gen), 0.01 * dist(gen));
                 p.color = glm::vec4(
                     62.0f / 255.0f,
                     164.0f / 255.0f,

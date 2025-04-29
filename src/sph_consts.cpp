@@ -28,14 +28,14 @@ namespace main_c {
     const float h = 0.06f;
 
     // Sphere Particle Initialization
-    const int sphere_count = 1000;
+    const int sphere_count = 5000;
     const glm::vec3 sphere_center(0.0f, 0.0f, 0.0f);
     const float sphere_radius = l / 4;
 
     // Cube Particle Initialization
-    const glm::vec3 cube_center(0.0f, 0.0f, 0.0f);
-    const float cube_side_length = l / 2;
-    const float cube_spacing = l / 10;
+    const glm::vec3 cube_center(-l/2, l, 0.0f);
+    const float cube_side_length = l / 1.5;
+    const float cube_spacing = h / 3.5f;
 
     // CM Constants
     const float cm_h = h;
@@ -47,7 +47,7 @@ namespace main_c {
 
 namespace sph_c {
     const float delta_time = 0.016f;
-    const float damping_factor = 1.0;
+    const float damping_factor = 0.3;
     const float mass = 0.05f;
     const float rho0 = 1000.0f;
     const float k = 1.0f;

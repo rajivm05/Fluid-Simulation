@@ -172,6 +172,7 @@ int main(int argc, char* argv[]) {
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
     Shader mShader {"../src/shaders/mVertex.glsl", "../src/shaders/fragment.glsl"};
+    Shader phongShader {"../src/shaders/phongvert.glsl", "../src/shaders/phongfrag.glsl"};
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
     SpatialHash spatialHash(h);
@@ -231,6 +232,10 @@ int main(int argc, char* argv[]) {
         // Position attribute
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
+
+        // Normal attribute
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*) (sizeof(glm::vec3)));
 
         // glBindVertexArray(mVAO);
         // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
@@ -313,8 +318,18 @@ int main(int argc, char* argv[]) {
 
         //render cube march stuff  
         if(turnOnMarchingCubes) {
+            glBindVertexArray(tVAO);
             glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());
+            glBufferData(GL_ARRAY_BUFFER, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data(), GL_DYNAMIC_DRAW);
+            // glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());
+            
+            // Position attribute
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
+
+            // Normal attribute
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*) (sizeof(glm::vec3)));
 
             // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
             // glBufferSubData(GL_ARRAY_BUFFER, 0, cm->cells.size() * sizeof(CubeCell), cm->cells.data());
@@ -339,6 +354,16 @@ int main(int argc, char* argv[]) {
             cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
             glBindVertexArray(tVAO);
             glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
+
+            // phongShader.use();
+            // phongShader.setMatrix("view", cam.view);
+            // phongShader.setMatrix("projection", cam.projection);
+            // phongShader.setVec3("lightPos", cam_pos);
+            // phongShader.setVec3("viewPos", cam_pos);
+            // phongShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+            // phongShader.setVec3("objectColor", glm::vec3(0.0f, 0.0f, 1.0f));
+            // glBindVertexArray(tVAO);
+            // glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
         }
 
         // mShader.use();
@@ -350,12 +375,12 @@ int main(int argc, char* argv[]) {
         // glBindVertexArray(mVAO);
         // glDrawArrays(GL_POINTS, 0, cm->cells.size());
 
-        cShader.use();
-        cShader.setMatrix("view", cam.view);
-        cShader.setMatrix("projection", cam.projection);
-        cShader.setVec4("color", sph.box_color);
-        glBindVertexArray(cVAO);
-        glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
+        // cShader.use();
+        // cShader.setMatrix("view", cam.view);
+        // cShader.setMatrix("projection", cam.projection);
+        // cShader.setVec4("color", sph.box_color);
+        // glBindVertexArray(cVAO);
+        // glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
 
         glfwSwapBuffers(window);
         glfwPollEvents();

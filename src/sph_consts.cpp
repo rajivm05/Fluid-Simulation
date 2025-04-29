@@ -39,7 +39,7 @@ namespace main_c {
 
     // CM Constants
     const float cm_h = h;
-    const float len_cube = h / 8.0f;
+    const float len_cube = h / 4.0f;
     const float iso_value = 0.6;
 
     const float sprite_size = l / 8;

@@ -155,9 +155,13 @@ void SPH::update_neighbors(std::vector<Particle>::iterator begin, std::vector<Pa
 }
 
 void SPH::boundary_conditions(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end) {
-    float flim_x = lim_x - sprite_size / 2;
-    float flim_y = lim_y - sprite_size / 2;
-    float flim_z = lim_z - sprite_size / 2;
+    // float flim_x = lim_x - sprite_size / 2;
+    // float flim_y = lim_y - sprite_size / 2;
+    // float flim_z = lim_z - sprite_size / 2;
+
+    float flim_x = lim_x - sprite_size;
+    float flim_y = lim_y - sprite_size;
+    float flim_z = lim_z - sprite_size;
 
     for(auto i = begin; i != end; i++) {
         auto& p = *i;

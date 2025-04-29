@@ -11,6 +11,7 @@ private:
     uint32_t m_tableSize;   // Prime number for better distribution
     uint32_t* m_particleTable;
     std::vector<Particle*> m_sortedParticles;
+    std::vector<Particle> m_sortedParticlesC;
 
     const float h;
     
@@ -25,6 +26,6 @@ public:
     SpatialHash& operator=(const SpatialHash&) = delete;
 
     void build(std::vector<Particle>& particles);
-    void queryNeighbors(glm::vec3 pos, std::vector<Particle*>& neighbors) const;
+    void queryNeighbors(glm::vec3 pos, std::vector<Particle*>& neighbors);
     glm::ivec3 positionToCell(const glm::vec3& pos) const;
 };

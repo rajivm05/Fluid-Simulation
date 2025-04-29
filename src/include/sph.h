@@ -42,6 +42,7 @@ public:
     void initialize_particles_sphere(int count, glm::vec3 center, float radius);
     void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
 
+    void update_hash(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void update_properties(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void calculate_forces(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void update_state(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);

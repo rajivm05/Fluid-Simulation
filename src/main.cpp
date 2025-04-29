@@ -200,8 +200,8 @@ int main(int argc, char* argv[]) {
     SPH sph {h, lim_x, lim_y, lim_z, sprite_size, spatialHash};
     CubeMarch* cm = nullptr;
 
-    // sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
-    sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
+    sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
+    // sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
     
     sph.create_cuboid();
 
@@ -259,11 +259,13 @@ int main(int argc, char* argv[]) {
 
     // while (!glfwWindowShouldClose(window)) {
     while(max_frames-- >= 0){
-        // std::cout << max_frames <<std::endl;
+        std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
-            for(auto& p: sph.particles){
-                p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
-            }
+            // for(auto& p: sph.particles){
+            //     p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
+            // }
+
+            sph.parallel(&SPH::update_hash);
             spatialHash.build(sph.particles);
 
             // float angle = glfwGetTime()/2.0f;

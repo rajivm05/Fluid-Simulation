@@ -33,29 +33,30 @@ void SpatialHash::build(std::vector<Particle>& particles) {
 
     std::sort(m_sortedParticles.begin(), m_sortedParticles.end(),
         [this](const Particle* a, const Particle* b) {
-            // return computeHash(positionToCell(a->position)) < computeHash(positionToCell(b->position));
             return a->hash_value < b->hash_value;
-
         });
 
-    // 3. Build hash table
     m_particleTable = static_cast<uint32_t*>(malloc(m_tableSize * sizeof(uint32_t)));
     std::fill_n(m_particleTable, m_tableSize, NO_PARTICLE);
 
     uint32_t prevHash = NO_PARTICLE;
     for(uint32_t i = 0; i < m_sortedParticles.size(); ++i) {
-        const uint32_t currentHash = computeHash(
-            positionToCell(m_sortedParticles[i]->position));
+        const uint32_t currentHash = m_sortedParticles[i]->hash_value;
         
         if(currentHash != prevHash) {
             m_particleTable[currentHash] = i;
             prevHash = currentHash;
         }
     }
+
+    m_sortedParticlesC.resize(particles.size());
+    for(size_t i = 0; i < particles.size(); ++i) {
+        m_sortedParticlesC[i] = *m_sortedParticles[i];
+    }
 }
 
 void SpatialHash::queryNeighbors(
-    glm::vec3 pos, std::vector<Particle*>& neighbors) const 
+    glm::vec3 pos, std::vector<Particle*>& neighbors)
 {
     float radius = h;
 
@@ -70,14 +71,10 @@ void SpatialHash::queryNeighbors(
 
                 if(m_particleTable[hash] == NO_PARTICLE) continue;
 
-                // Find particles in this cell
                 uint32_t i = m_particleTable[hash];
-                while(i < m_sortedParticles.size() && 
-                      computeHash(positionToCell(m_sortedParticles[i]->position)) == hash) 
-                {
-                    // if(glm::distance(pos, m_sortedParticles[i]->position) <= radius) {
-                        neighbors.push_back(m_sortedParticles[i]);
-                    // }
+                while(i < m_sortedParticlesC.size() && m_sortedParticlesC[i].hash_value == hash) {
+                    neighbors.push_back(&m_sortedParticlesC[i]);
+
                     ++i;
                 }
             }

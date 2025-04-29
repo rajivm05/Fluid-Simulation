@@ -67,6 +67,13 @@ void SPH::initialize_particles_cube(glm::vec3 center, float side_length, float s
     }
 }
 
+void SPH::update_hash(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end) {
+    for(auto i = begin; i != end; i++) {
+        auto& p = *i;
+        p.hash_value = sp_hash.computeHash(sp_hash.positionToCell(p.position));
+    }
+}
+
 float SPH::poly6(glm::vec3 r_v, float h) {
     float r = glm::length(r_v);
     if(r <= h) {

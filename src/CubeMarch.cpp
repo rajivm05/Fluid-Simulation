@@ -34,21 +34,23 @@ void CubeMarch::update_color(std::vector<CubeCell>::iterator begin, std::vector<
         auto& c = *i;
 
         c.color = 0.0f;
+        // for(auto& p: sph->particles) {
+        //     c.color += sph->mass / p.density * sph->poly6(c.position - p.position, h);
+        // }
+
         for(auto p: c.neighbors) {
             c.color += sph->mass / p->density * sph->poly6(c.position - p->position, h);
+            // std::cout << sph->poly6(c.position - p->position, h) << std::endl;
         }
     }
 }
 
 void CubeMarch::update_neighbors(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end) {
-    int k = 0;
     for(auto i = begin; i != end; i++) {
         auto& c = *i;
 
         c.neighbors.clear();
         sp_hash.queryNeighbors(c.position, c.neighbors);
-        std::cout << k << " - " << c.neighbors.size() << std::endl;
-        k++;
     }
 }
 
@@ -73,7 +75,7 @@ void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
         for(int j = 0; j < ny - 1; j++){
             for(int k = 0; k < nz - 1; k++){
                 int corners[8];
-                for(int m =0; m<8; m++) {
+                for(int m = 0; m < 8; m++) {
                     int dx = m        & 1;
                     int dy = (m >> 1) & 1;
                     int dz = (m >> 2) & 1;
@@ -81,8 +83,9 @@ void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
                 }
 
                 int table_index = 0;
-                for(int i = 0; i<8; i++){
-                    if(cells[corners[i]].color > iso_value) { table_index |= (1 << i); }
+                for(int m = 0; m < 8; m++){
+                    if(cells[corners[m]].color > iso_value) { table_index |= (1 << m); }
+                    // std::cout << cells[corners[m]].color << std::endl;
                 }
                 
                 int edgeList = edgeTable[table_index];
@@ -115,10 +118,10 @@ void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
                     vertList[11] = vertex_interpolation(iso_value, corners[3], corners[7]);
 
                 int* triList = triTable[table_index];
-                for(int i = 0; triList[i] != -1; i += 3){
-                    glm::vec3 v0 = vertList[triList[i]];
-                    glm::vec3 v1 = vertList[triList[i+1]];
-                    glm::vec3 v2 = vertList[triList[i+2]];
+                for(int m = 0; triList[m] != -1; m += 3){
+                    glm::vec3 v0 = vertList[triList[m]];
+                    glm::vec3 v1 = vertList[triList[m+1]];
+                    glm::vec3 v2 = vertList[triList[m+2]];
 
                     tris.push_back(v0);
                     tris.push_back(v1);

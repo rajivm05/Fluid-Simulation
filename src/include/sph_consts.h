@@ -28,6 +28,7 @@ namespace main_c {
     extern const float cube_side_length;
     extern const float cube_spacing;
 
+    extern const float cm_h;
     extern const float len_cube;
     extern const float iso_value;
 

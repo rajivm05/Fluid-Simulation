@@ -17,5 +17,5 @@ void main() {
     gl_PointSize = 0.5 * (screen_sprite.x + screen_sprite.y);
     gl_Position = projection * view_space;
 
-    vColor = color * vec4(1.0f, 0.0f, 0.0f, 1.0f); // + (1 - color) * vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    vColor = color / 15000.0 * vec4(1.0f, 0.0f, 0.0f, 1.0f) + (1 - color / 15000.0) * vec4(0.0f, 1.0f, 0.0f, 1.0f);
 }

@@ -9,7 +9,7 @@ namespace main_c {
     int height = 600;
     const char* window_name = "Particles Array";
 
-    const float l = 0.5f;
+    const float l = 0.3f;
 
     // Camera Constants
     glm::vec3 cam_pos(2*l, 1.5*l, 4.5*l);
@@ -25,7 +25,7 @@ namespace main_c {
     const float lim_z = l;
 
     // Smoothing Distance
-    const float h = 0.5f;
+    const float h = 0.06f;
 
     // Sphere Particle Initialization
     const int sphere_count = 1000;
@@ -38,15 +38,17 @@ namespace main_c {
     const float cube_spacing = l / 10;
 
     // CM Constants
-    const float len_cube = h * 2.0f;
-    const float iso_value = 0.5;
+    const float cm_h = h*2;
+    const float len_cube = h / 4.0f;
+    // const float iso_value = 0.5;
+    const float iso_value = 4*5000.0;
 
     const float sprite_size = l / 8;
 }
 
 namespace sph_c {
     const float delta_time = 0.016f;
-    const float damping_factor = 0.4;
+    const float damping_factor = 1.0;
     const float mass = 0.05f;
     const float rho0 = 1000.0f;
     const float k = 1.0f;

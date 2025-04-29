@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
     glGenBuffers(1, &mVBO);
     if(turnOnMarchingCubes)
     {
-        cm.reset(new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value, spatialHash});
+        cm.reset(new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, cm_h, &sph, iso_value, spatialHash});
         int max_triangles = 5 * cm->cells.size();
 
         glBindVertexArray(tVAO);
@@ -326,13 +326,13 @@ int main(int argc, char* argv[]) {
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        shader.use();
-        shader.setMatrix("view", cam.view);
-        shader.setMatrix("projection", cam.projection);
-        shader.setVec2("screen_size", glm::vec2(width, height));
-        shader.setFloat("sprite_size", sprite_size);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_POINTS, 0, sph.particles.size());
+        // shader.use();
+        // shader.setMatrix("view", cam.view);
+        // shader.setMatrix("projection", cam.projection);
+        // shader.setVec2("screen_size", glm::vec2(width, height));
+        // shader.setFloat("sprite_size", sprite_size);
+        // glBindVertexArray(VAO);
+        // glDrawArrays(GL_POINTS, 0, sph.particles.size());
 
         if(turnOnMarchingCubes) {
             cShader.use();
@@ -343,13 +343,13 @@ int main(int argc, char* argv[]) {
             glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
         }
 
-        mShader.use();
-        mShader.setMatrix("view", cam.view);
-        mShader.setMatrix("projection", cam.projection);
-        mShader.setVec2("screen_size", glm::vec2(width, height));
-        mShader.setFloat("sprite_size", 0.1);
-        glBindVertexArray(mVAO);
-        glDrawArrays(GL_POINTS, 0, cm->cells.size());
+        // mShader.use();
+        // mShader.setMatrix("view", cam.view);
+        // mShader.setMatrix("projection", cam.projection);
+        // mShader.setVec2("screen_size", glm::vec2(width, height));
+        // mShader.setFloat("sprite_size", 0.01);
+        // glBindVertexArray(mVAO);
+        // glDrawArrays(GL_POINTS, 0, cm->cells.size());
 
         cShader.use();
         cShader.setMatrix("view", cam.view);

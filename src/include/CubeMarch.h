@@ -4,7 +4,6 @@
 #include "particle.h"
 #include "sph.h"
 
-
 struct CubeCell {
     glm::vec3 position;
     float color;
@@ -17,17 +16,16 @@ struct Triangle{
     glm::vec3 v2;
 };
 
-
 class CubeMarch {
 private:
-    
-
     int num_threads;
     float h;
 
     SPH* sph;
     static int edgeTable[256];
     static int triTable[256][16];
+
+    SpatialHash& sp_hash;
 
 public:
     int nx;
@@ -36,19 +34,18 @@ public:
     int iso_value;
 
     float len_cube;
-    // std::vector<std::vector<std::vector<CubeCell>>> cells;
     std::vector<CubeCell> cells;
-    // std::vector<std::vector<glm::vec3[3]>> triangles;
     std::vector<glm::vec3> triangles;
 
-    CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv);
+    CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv, SpatialHash& sh);
 
     void MarchingCubes();
+    void march_cubes(int begin, int end, std::vector<glm::vec3>& tris);
     int cube_index(int i, int j, int k);
     glm::vec3 vertex_interpolation(float iso_value, int p1, int p2);
 
-
     void update_color(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
+    void update_neighbors(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
     void load_triangles(const std::vector<glm::vec3>& loaded_triangles);
 
     template <typename Func, typename... Args>

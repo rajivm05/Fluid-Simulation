@@ -31,28 +31,6 @@ enum class RenderMode {
     load
 };
 
-void threadedQueryCM(SpatialHash& sh, std::vector<CubeCell>& cells, int start, int end, float h) {
-    for(int i = start; i < end; ++i) {
-        sh.queryNeighbors(cells[i].position, cells[i].neighbors);
-    }
-}
-
-void parallelNeighborQueryCM(CubeMarch* cm, SpatialHash& sh, float h, int numThreads = std::thread::hardware_concurrency()) {
-    int N = cm->cells.size();
-    int chunk = (N + numThreads - 1) / numThreads;
-
-    std::vector<std::thread> threads;
-
-    for (int t = 0; t < numThreads; ++t) {
-        int start = t * chunk;
-        int end = std::min(N, start + chunk);
-        threads.emplace_back(threadedQueryCM, std::ref(sh), std::ref(cm->cells), start, end, h);
-    }
-
-    for (auto& t : threads)
-        t.join();
-}
-
 std::tuple<FrameHeader, std::vector<Particle_buffer> , std::vector<glm::vec3>>
 load_frame_data(const std::string& filename) {
     std::ifstream in(filename, std::ios::binary);
@@ -79,7 +57,7 @@ load_frame_data(const std::string& filename) {
     return {header, particles, triangles};
 }
 
-void save_frame_data(SPH& sph, CubeMarch* cm, int frame_number, const Camera& cam, 
+void save_frame_data(SPH& sph, std::unique_ptr<CubeMarch>& cm, int frame_number, const Camera& cam, 
     const std::string& prefix = "../frames/frame_") {
     std::ostringstream filename;
     filename << prefix << std::setw(4) << std::setfill('0') << frame_number << ".bin";
@@ -162,7 +140,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-
     std::string mode_s = argv[1];
     std::string march_s = argv[2];
 
@@ -194,11 +171,12 @@ int main(int argc, char* argv[]) {
     
     Shader shader {"../src/shaders/vertex.glsl", "../src/shaders/fragment.glsl"};
     Shader cShader {"../src/shaders/cVertex.glsl", "../src/shaders/cFragment.glsl"};
+    Shader mShader {"../src/shaders/mVertex.glsl", "../src/shaders/fragment.glsl"};
 
     Camera cam {cam_pos, cam_target, cam_up, cam_fov, (float) width, (float) height, cam_near, cam_far};
     SpatialHash spatialHash(h);
     SPH sph {h, lim_x, lim_y, lim_z, sprite_size, spatialHash};
-    CubeMarch* cm = nullptr;
+    std::unique_ptr<CubeMarch> cm = nullptr;
 
     sph.initialize_particles_sphere(sphere_count, sphere_center, sphere_radius);
     // sph.initialize_particles_cube(cube_center, cube_side_length, cube_spacing);
@@ -236,9 +214,12 @@ int main(int argc, char* argv[]) {
     GLuint tVAO, tVBO;
     glGenVertexArrays(1, &tVAO);
     glGenBuffers(1, &tVBO);
+    GLuint mVAO, mVBO;
+    glGenVertexArrays(1, &mVAO);
+    glGenBuffers(1, &mVBO);
     if(turnOnMarchingCubes)
     {
-        cm = new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value};
+        cm.reset(new CubeMarch{2*lim_x, 2*lim_y, 2*lim_z, len_cube, h, &sph, iso_value, spatialHash});
         int max_triangles = 5 * cm->cells.size();
 
         glBindVertexArray(tVAO);
@@ -248,18 +229,26 @@ int main(int argc, char* argv[]) {
         // Position attribute
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+
+        glBindVertexArray(mVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, mVBO);
+        glBufferData(GL_ARRAY_BUFFER, cm->cells.size() * sizeof(CubeCell), cm->cells.data(), GL_DYNAMIC_DRAW);
+
+        // Position attribute
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, position));
+        // Color attribute
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(CubeCell), (void*)offsetof(CubeCell, color));
     }
-    // else{  
-    //     glBufferData(GL_ARRAY_BUFFER, 0 * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
-    // }
     
     float radius = 5.0f;  // distance from center
     int frame_number = 0;
     int max_frames = 1800;
 
-    // while (!glfwWindowShouldClose(window)) {
-    while(max_frames-- >= 0){
-        std::cout << max_frames <<std::endl;
+    while (!glfwWindowShouldClose(window)) {
+    // while(max_frames-- >= 0){
+        // std::cout << max_frames <<std::endl;
         if(mode == RenderMode::render || mode == RenderMode::save) {
             // for(auto& p: sph.particles){
             //     p.hash_value = spatialHash.computeHash(spatialHash.positionToCell(p.position));
@@ -277,8 +266,7 @@ int main(int argc, char* argv[]) {
             // cam.view = glm::lookAt(cam_pos, cam_target, cam_up);
     
             sph.parallel(&SPH::update_neighbors);
-            
-            if(turnOnMarchingCubes) { parallelNeighborQueryCM(cm, spatialHash, h); }
+            if(turnOnMarchingCubes) { cm->parallel(&CubeMarch::update_neighbors); }
 
             sph.parallel(&SPH::update_properties);
             sph.parallel(&SPH::calculate_forces);
@@ -295,7 +283,7 @@ int main(int argc, char* argv[]) {
                 filename << "../frames/frame_" << std::setw(4) << std::setfill('0') << frame_number++ << ".bin";
                 std::cout << filename.str() <<std::endl;
                 auto [header, buffer, triangles] = load_frame_data(filename.str());
-                cm->load_triangles(triangles);
+                if(turnOnMarchingCubes) { cm->load_triangles(triangles); }
 
                 // Update buffer
                 glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -329,6 +317,9 @@ int main(int argc, char* argv[]) {
         if(turnOnMarchingCubes) {
             glBindBuffer(GL_ARRAY_BUFFER, tVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());
+
+            glBindBuffer(GL_ARRAY_BUFFER, mVBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, cm->cells.size() * sizeof(CubeCell), cm->cells.data());
         }
 
         // Draw
@@ -343,16 +334,26 @@ int main(int argc, char* argv[]) {
         glBindVertexArray(VAO);
         glDrawArrays(GL_POINTS, 0, sph.particles.size());
 
-        cShader.use();
-        cShader.setMatrix("view", cam.view);
-        cShader.setMatrix("projection", cam.projection);
-
         if(turnOnMarchingCubes) {
+            cShader.use();
+            cShader.setMatrix("view", cam.view);
+            cShader.setMatrix("projection", cam.projection);
             cShader.setVec4("color", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
             glBindVertexArray(tVAO);
             glDrawArrays(GL_TRIANGLES, 0, cm->triangles.size());
         }
 
+        mShader.use();
+        mShader.setMatrix("view", cam.view);
+        mShader.setMatrix("projection", cam.projection);
+        mShader.setVec2("screen_size", glm::vec2(width, height));
+        mShader.setFloat("sprite_size", 0.1);
+        glBindVertexArray(mVAO);
+        glDrawArrays(GL_POINTS, 0, cm->cells.size());
+
+        cShader.use();
+        cShader.setMatrix("view", cam.view);
+        cShader.setMatrix("projection", cam.projection);
         cShader.setVec4("color", sph.box_color);
         glBindVertexArray(cVAO);
         glDrawArrays(GL_TRIANGLES, 0, sph.box_positions.size());  
@@ -368,8 +369,6 @@ int main(int argc, char* argv[]) {
     glDeleteBuffers(1, &cVBO);
     glDeleteBuffers(1, &tVBO);
     glDeleteProgram(shader.ID);
-
-    delete cm;
 
     glfwTerminate();
     return 0;

@@ -72,7 +72,8 @@ glm::vec3 CubeMarch::vertex_interpolation(float iso_value, int p1, int p2) {
     return v1 + mu * (v2 - v1);
 }
 
-void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
+// void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
+void CubeMarch::march_cubes(int begin, int end, std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash>& local_map_i, std::vector<Edge>& tris) {
     for(int i = begin; i < end; i++){
         for(int j = 0; j < ny - 1; j++){
             for(int k = 0; k < nz - 1; k++){
@@ -94,29 +95,56 @@ void CubeMarch::march_cubes(int begin, int end, std::vector<glm::vec3>& tris) {
                 int edgeList = edgeTable[table_index];
                 if(edgeList == 0) { continue; }
 
+                // if(edgeList &    1) { vertList[0]  = vertex_interpolation(iso_value, corners[0], corners[1]); }
+                // if(edgeList &    2) { vertList[1]  = vertex_interpolation(iso_value, corners[1], corners[2]); }
+                // if(edgeList &    4) { vertList[2]  = vertex_interpolation(iso_value, corners[2], corners[3]); }
+                // if(edgeList &    8) { vertList[3]  = vertex_interpolation(iso_value, corners[3], corners[0]); }
+                // if(edgeList &   16) { vertList[4]  = vertex_interpolation(iso_value, corners[4], corners[5]); }
+                // if(edgeList &   32) { vertList[5]  = vertex_interpolation(iso_value, corners[5], corners[6]); }
+                // if(edgeList &   64) { vertList[6]  = vertex_interpolation(iso_value, corners[6], corners[7]); }
+                // if(edgeList &  128) { vertList[7]  = vertex_interpolation(iso_value, corners[7], corners[4]); }
+                // if(edgeList &  256) { vertList[8]  = vertex_interpolation(iso_value, corners[0], corners[4]); }
+                // if(edgeList &  512) { vertList[9]  = vertex_interpolation(iso_value, corners[1], corners[5]); }
+                // if(edgeList & 1024) { vertList[10] = vertex_interpolation(iso_value, corners[2], corners[6]); }
+                // if(edgeList & 2048) { vertList[11] = vertex_interpolation(iso_value, corners[3], corners[7]); }
+                
                 glm::vec3 vertList[12];
-                if(edgeList &    1) { vertList[0]  = vertex_interpolation(iso_value, corners[0], corners[1]); }
-                if(edgeList &    2) { vertList[1]  = vertex_interpolation(iso_value, corners[1], corners[2]); }
-                if(edgeList &    4) { vertList[2]  = vertex_interpolation(iso_value, corners[2], corners[3]); }
-                if(edgeList &    8) { vertList[3]  = vertex_interpolation(iso_value, corners[3], corners[0]); }
-                if(edgeList &   16) { vertList[4]  = vertex_interpolation(iso_value, corners[4], corners[5]); }
-                if(edgeList &   32) { vertList[5]  = vertex_interpolation(iso_value, corners[5], corners[6]); }
-                if(edgeList &   64) { vertList[6]  = vertex_interpolation(iso_value, corners[6], corners[7]); }
-                if(edgeList &  128) { vertList[7]  = vertex_interpolation(iso_value, corners[7], corners[4]); }
-                if(edgeList &  256) { vertList[8]  = vertex_interpolation(iso_value, corners[0], corners[4]); }
-                if(edgeList &  512) { vertList[9]  = vertex_interpolation(iso_value, corners[1], corners[5]); }
-                if(edgeList & 1024) { vertList[10] = vertex_interpolation(iso_value, corners[2], corners[6]); }
-                if(edgeList & 2048) { vertList[11] = vertex_interpolation(iso_value, corners[3], corners[7]); }
+                Edge edgeSave[12];
+                for(int m = 0; m < 12; m++) {
+                    if(edgeList & (1 << m)) {
+                        Edge e {corners[edgeMap[i][0]], corners[edgeMap[i][1]]};
+                        edgeSave[m] = e;
+
+                        auto f = local_map_i.find(e);
+                        if(f != local_map_i.end()) {
+                            vertList[m] = f->second.first;
+                        } else {
+                            glm::vec3 interp = vertex_interpolation(iso_value, e.v1, e.v2);
+                            local_map_i.insert({e, {interp, glm::vec3(0.0f)}});
+                            vertList[m] = interp;
+                        }
+                    }
+                }
 
                 int* triList = triTable[table_index];
                 for(int m = 0; triList[m] != -1; m += 3){
                     glm::vec3 v0 = vertList[triList[m  ]];
                     glm::vec3 v1 = vertList[triList[m+1]];
                     glm::vec3 v2 = vertList[triList[m+2]];
+                    
+                    glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+                    
+                    Edge e0 = edgeSave[triList[m]]; 
+                    Edge e1 = edgeSave[triList[m+1]]; 
+                    Edge e2 = edgeSave[triList[m+2]]; 
 
-                    tris.push_back(v0);
-                    tris.push_back(v1);
-                    tris.push_back(v2);
+                    local_map_i[e0].second += normal;
+                    local_map_i[e1].second += normal;
+                    local_map_i[e2].second += normal;
+
+                    tris.push_back(e0);
+                    tris.push_back(e1);
+                    tris.push_back(e2);
                 }
             }
         }
@@ -128,7 +156,8 @@ void CubeMarch::MarchingCubes() {
     int chunk = (total + num_threads - 1) / num_threads;
 
     std::vector<std::thread> threads;
-    std::vector<std::vector<glm::vec3>> local_triangles(num_threads, std::vector<glm::vec3>{});
+    std::vector<std::vector<Edge>> local_triangles(num_threads, std::vector<Edge>{});
+    std::vector<std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash>> local_maps(num_threads, std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash>{});
 
     for(int i = 0; i < num_threads; i++) {
         int begin = i * chunk;
@@ -137,16 +166,36 @@ void CubeMarch::MarchingCubes() {
         if(begin >= total) { break; }
 
         threads.emplace_back(
-            [this, begin, end, i, &local_triangles]() {
-                std::invoke(&CubeMarch::march_cubes, this, begin, end, local_triangles[i]);
+            [this, begin, end, i, &local_triangles, &local_maps]() {
+                this->march_cubes(begin, end, local_maps[i], local_triangles[i]);
             }
         );
     }
 
     for(auto& t: threads) { t.join(); }
 
+    std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash> global_map {};
+    for(auto& local_map_i: local_maps) {
+        for(auto& m: local_map_i) {
+            Edge e = m.first;
+            auto f = global_map.find(e);
+            if(f != global_map.end()) {
+                f->second.second += m.second.second;
+            } else {
+                global_map.insert({e, m.second});
+            }
+        }
+    }
+
     triangles.clear();
     for(auto& tris: local_triangles) {
-        triangles.insert(triangles.end(), tris.begin(), tris.end());
+        // triangles.insert(triangles.end(), tris.begin(), tris.end());
+        // triangles.insert()
+        for(auto& e: tris){
+            // triangles.push_back()
+            auto& e_output = global_map[e];
+            triangles.push_back(e_output.first);
+            triangles.push_back(glm::normalize(e_output.second));
+        }
     }
 }

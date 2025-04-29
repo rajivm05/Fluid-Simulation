@@ -226,11 +226,11 @@ int main(int argc, char* argv[]) {
 
         glBindVertexArray(tVAO);
         glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-        glBufferData(GL_ARRAY_BUFFER, max_triangles * 3 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, max_triangles * 6 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
 
         // Position attribute
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
 
         // glBindVertexArray(mVAO);
         // glBindBuffer(GL_ARRAY_BUFFER, mVBO);

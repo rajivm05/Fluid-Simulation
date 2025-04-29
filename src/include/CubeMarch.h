@@ -1,4 +1,5 @@
 #include <vector>
+#include <unordered_map>
 #include <thread>
 
 #include "particle.h"
@@ -16,6 +17,21 @@ struct Triangle{
     glm::vec3 v2;
 };
 
+struct Edge {
+    int v1;
+    int v2;
+
+    bool operator==(const Edge& e) const {
+        return (v1 == e.v1 && v2 == e.v2) || (v1 == e.v2 && v2 == e.v1);
+    }
+};
+
+struct EdgeHash {
+    std::size_t operator()(const Edge& e) const {
+        return e.v1 ^ (e.v2 << 1);
+    }
+};
+
 class CubeMarch {
 private:
     int num_threads;
@@ -24,6 +40,7 @@ private:
     SPH* sph;
     static int edgeTable[256];
     static int triTable[256][16];
+    static int edgeMap[12][2];
 
     SpatialHash& sp_hash;
 
@@ -47,6 +64,8 @@ public:
     void update_color(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
     void update_neighbors(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
     void load_triangles(const std::vector<glm::vec3>& loaded_triangles);
+
+    void march_cubes(int begin, int end, std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash>& goon, std::vector<Edge>& tris);
 
     template <typename Func, typename... Args>
     void parallel(Func&& func, Args&&... args) {

@@ -33,7 +33,7 @@ enum class RenderMode {
 
 // std::tuple<FrameHeader, std::vector<Particle_buffer> , std::vector<glm::vec3>>
 // load_frame_data(const std::string& filename) {
-    std::tuple<FrameHeader, std::vector<Particle>, std::vector<glm::vec3>>
+    std::tuple<FrameHeader, std::vector<Particle>, std::vector<Vertex>>
     load_frame_data(const std::string& filename, bool load_cube_marching = true){
     std::ifstream in(filename, std::ios::binary);
     if (!in) throw std::runtime_error("Can't open " + filename);
@@ -55,10 +55,10 @@ enum class RenderMode {
 
     // std::vector<glm::vec3> triangles(header.triangle_count);
     // in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
-    std::vector<glm::vec3> triangles;
+    std::vector<Vertex> triangles;
     if (load_cube_marching && header.triangle_count > 0) {
         triangles.resize(header.triangle_count);
-        in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(glm::vec3));
+        in.read(reinterpret_cast<char*>(triangles.data()), header.triangle_count * sizeof(Vertex));
     }
 
     return {header, particles, triangles};
@@ -115,7 +115,7 @@ enum class RenderMode {
 
     // out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
     if (save_cube_marching) {
-        out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(glm::vec3));
+        out.write(reinterpret_cast<const char*>(cm->triangles.data()), cm->triangles.size() * sizeof(Vertex));
     }
 
     out.close();
@@ -268,15 +268,22 @@ int main(int argc, char* argv[]) {
 
         glBindVertexArray(tVAO);
         glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-        glBufferData(GL_ARRAY_BUFFER, max_triangles * 6 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+        // glBufferData(GL_ARRAY_BUFFER, max_triangles * 6 * sizeof(glm::vec3), nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, max_triangles * 12 * sizeof(Vertex), nullptr, GL_DYNAMIC_DRAW);
 
         // Position attribute
+        // glEnableVertexAttribArray(0);
+        // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
+
+        // // Normal attribute
+        // glEnableVertexAttribArray(1);
+        // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*) (sizeof(glm::vec3)));
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
 
         // Normal attribute
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*) (sizeof(glm::vec3)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
 
         // glBindVertexArray(mVAO);
         // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
@@ -349,7 +356,11 @@ int main(int argc, char* argv[]) {
             glBindBuffer(GL_ARRAY_BUFFER, cVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sph.box_positions.size() * sizeof(glm::vec3), sph.box_positions.data());
 
-            if(turnOnMarchingCubes) { cm->MarchingCubes(); }
+            if(turnOnMarchingCubes) { cm->MarchingCubes(); 
+                // std::cout << "Number of triangles:" << std::endl;
+
+                // std::cout << cm->triangles.size() << std::endl;
+            }
 
         }
         else if(mode == RenderMode::save){
@@ -364,16 +375,16 @@ int main(int argc, char* argv[]) {
         if(turnOnMarchingCubes) {
             glBindVertexArray(tVAO);
             glBindBuffer(GL_ARRAY_BUFFER, tVBO);
-            glBufferData(GL_ARRAY_BUFFER, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data(), GL_DYNAMIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, cm->triangles.size() * sizeof(Vertex), cm->triangles.data(), GL_DYNAMIC_DRAW);
             // glBufferSubData(GL_ARRAY_BUFFER, 0, cm->triangles.size() * sizeof(glm::vec3), cm->triangles.data());
             
             // Position attribute
             glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*)0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
 
             // Normal attribute
             glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 2*sizeof(glm::vec3), (void*) (sizeof(glm::vec3)));
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (sizeof(glm::vec3)));
 
             // glBindBuffer(GL_ARRAY_BUFFER, mVBO);
             // glBufferSubData(GL_ARRAY_BUFFER, 0, cm->cells.size() * sizeof(CubeCell), cm->cells.data());

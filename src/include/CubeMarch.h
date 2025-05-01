@@ -16,6 +16,10 @@ struct Triangle{
     glm::vec3 v1;
     glm::vec3 v2;
 };
+struct Vertex{
+    glm::vec3 position;
+    glm::vec3 normal;
+};
 
 struct Edge {
     int v1;
@@ -52,7 +56,8 @@ public:
 
     float len_cube;
     std::vector<CubeCell> cells;
-    std::vector<glm::vec3> triangles;
+    // std::vector<glm::vec3> triangles;
+    std::vector<Vertex> triangles;
 
     CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv, SpatialHash& sh);
 
@@ -63,7 +68,7 @@ public:
 
     void update_color(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
     void update_neighbors(std::vector<CubeCell>::iterator begin, std::vector<CubeCell>::iterator end);
-    void load_triangles(const std::vector<glm::vec3>& loaded_triangles);
+    void load_triangles(const std::vector<Vertex>& loaded_triangles);
 
     void march_cubes(int begin, int end, std::unordered_map<Edge, std::pair<glm::vec3, glm::vec3>, EdgeHash>& goon, std::vector<Edge>& tris);
 

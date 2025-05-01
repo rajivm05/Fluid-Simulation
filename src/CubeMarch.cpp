@@ -1,6 +1,7 @@
 #include "CubeMarch.h"
 #include <iostream>
 
+
 CubeMarch::CubeMarch(float lim_x, float lim_y, float lim_z, float len, float smoothing_dist, SPH* sph_ptr, float iv, SpatialHash& sh):
                                                     len_cube(len),
                                                     nx(2 * lim_x / len + 1),
@@ -33,7 +34,7 @@ void CubeMarch::update_color(std::vector<CubeCell>::iterator begin, std::vector<
 
         c.color = 0.0f;
         for(auto p: c.neighbors) {
-            if(p->density == 0.0) { continue; }
+            if(p->density <= 0.001) { continue; }
 
             c.color += sph->mass / p->density * sph->poly6(c.position - p->position, h);
         }
@@ -49,7 +50,7 @@ void CubeMarch::update_neighbors(std::vector<CubeCell>::iterator begin, std::vec
     }
 }
 
-void CubeMarch::load_triangles(const std::vector<glm::vec3>& loaded_triangles)
+void CubeMarch::load_triangles(const std::vector<Vertex>& loaded_triangles)
 {
     this->triangles = loaded_triangles;
 }
@@ -61,15 +62,25 @@ int CubeMarch::cube_index(int i, int j, int k) {
 glm::vec3 CubeMarch::vertex_interpolation(float iso_value, int p1, int p2) {
     const glm::vec3 v1 = cells[p1].position;
     const glm::vec3 v2 = cells[p2].position;
+    // std::cout << "idhar" << std::endl;
+    
 
     const float c1 = cells[p1].color;
     const float c2 = cells[p2].color;
 
+    // std::cout << "c1 ka color: " << c1 << std::endl;
+    // std::cout << "c2 ka color: " << c2 << std::endl;
+    
+
     if(std::abs(iso_value - c1) < 1e-5) { return v1; }
+
     if(std::abs(iso_value - c2) < 1e-5) { return v2; }
+
     if(std::abs(c1 - c2) < 1e-5) { return v1; }
 
+
     float mu = (iso_value - c1) / (c2 - c1);
+    // std::cout << mu << std::endl;
     return v1 + mu * (v2 - v1);
 }
 
@@ -194,8 +205,9 @@ void CubeMarch::MarchingCubes() {
         for(auto& e: tris){
             // triangles.push_back()
             auto& e_output = global_map[e];
-            triangles.push_back(e_output.first);
-            triangles.push_back(glm::normalize(e_output.second));
+            // triangles.push_back(e_output.first);
+            // triangles.push_back(glm::normalize(e_output.second));
+            triangles.push_back(Vertex {e_output.first, glm::normalize(e_output.second)});
         }
     }
 }

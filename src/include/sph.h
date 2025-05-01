@@ -2,47 +2,53 @@
 #include <vector>
 #include <thread>
 #include <functional>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "SpatialHash.h"
 #include "particle.h"
+#include "sph_consts.h"
 
 class SPH {
-private:
-    int num_threads;
 public:
-    float delta_time;
-    float damping_factor;
-    static const glm::vec3 gravity;
-    float lim_x;
-    float lim_y;
-    float lim_z;
-    std::vector<Particle> particles;
-    std::vector<Particle_buffer> buffer;
-    std::vector<glm::vec3> box_positions;
-    const glm::vec4 box_color;
+    const int num_threads;
 
-    const float h = 0.06f;       // Smoothing radius
-    const float mass = 0.05f;   // Particle mass
-    const float rho0 = 1000.0f; // Reference density
-    //working constants
-    const float k = 1.0f;    // Pressure stiffness
-    const float mu = 1.5f; 
+    const float h;
+    const float lim_x;
+    const float lim_y;
+    const float lim_z;
+    const float sprite_size;
 
-    //experimental constants
-    // const float k = 2000.0f;    // Pressure stiffness
-    // const float mu = 0.5f; 
+    const float delta_time = sph_c::delta_time;
+    const float damping_factor = sph_c::damping_factor;
+    const float mass = sph_c::mass;
+    const float rho0 = sph_c::rho0;
+    const float k = sph_c::k;
+    const float mu = sph_c::mu; 
+
+    const glm::vec4 box_color = sph_c::box_color;
+    const glm::vec3 gravity = sph_c::gravity;
 
     const float poly6_const = 315 / (64 * glm::pi<float>() * glm::pow(h, 9));
     const float spikyGrad_const = -45 / (glm::pi<float>() * pow(h, 6));
-    const float viscosityLaplace_const = 45/(glm::pi<float>() * pow(h, 6));
+    const float viscosityLaplace_const = 45 / (glm::pi<float>() * pow(h, 6));
 
-    SPH(float dt, float df, int count, float lx, float ly, float lz, glm::vec4 box_color);
+    SpatialHash& sp_hash;
 
-    void initialize_particles(glm::vec3 center, float radius);
+    std::vector<Particle> particles;
+    std::vector<glm::vec3> box_positions;
+
+    SPH(float smoothing_dist, float lx, float ly, float lz, float sp_size, SpatialHash& sh);
+
+    void initialize_particles_sphere(int count, glm::vec3 center, float radius);
+    void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
+
+    void update_hash(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void update_properties(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void calculate_forces(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void update_state(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
-    void boundary_conditions(float sprite_size);
+    void update_neighbors(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
+    void boundary_conditions(std::vector<Particle>::iterator begin, std::vector<Particle>::iterator end);
     void create_cuboid();
-    void initialize_particles_cube(glm::vec3 center, float side_length, float spacing);
 
     float poly6(glm::vec3 r_v, float h);
     glm::vec3 spiky_grad(glm::vec3 r_v, float h);

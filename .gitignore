@@ -1,5 +1,8 @@
 /build/
 /frames/
+/frames_marchoffphongoff/
+/frames_marchonphongoff/
+/frames_marchonphongon/
 CMakeCommands.txt
 CMakeWindows.txt
 compile_commands.json

@@ -2,59 +2,10 @@
 #include <cmath>
 #include <algorithm>
 
-
-
-
-    // SpatialHash::SpatialHash(float size, float h){
-    //     this->cellSize = size;
-    //     this->h = h;
-    // }
-    
-    // size_t SpatialHash::hash(const glm::vec3& pos) {
-    //     int x = static_cast<int>(pos.x );
-    //     int y = static_cast<int>(pos.y );
-    //     int z = static_cast<int>(pos.z );
-    //     return ((size_t)x * 92837111) ^ ((size_t)y * 689287499) ^ ((size_t)z*83492791);
-    //     // return (size_t) x * 2 / cellSize + (size_t) y;  
-    //     // return ()
-    // }
-    
-    // void SpatialHash::update(std::vector<Particle>& particles) {
-    //     grid.clear();
-    //     for(auto& p : particles) {
-    //         // grid[hash(p.position)].push_back(&p);
-    //         size_t key = hash(p.position);
-    //         grid[key].push_back(&p);
-    //     }
-    // }
-    
-    // void SpatialHash::findNeighbors(Particle& p) {
-    //     p.neighbors.clear();
-    //     for(int dx = -1; dx <= 1; dx++) {
-    //         for(int dy = -1; dy <= 1; dy++) {
-    //             for(int dz = -1; dz <=1; dz++){
-    //                 glm::vec3 probe = p.position + glm::vec3(dx, dy, dz);
-    //                 size_t key = hash(probe);
-    //                 if (grid.find(key) != grid.end()) {
-    //                     for (Particle* neighbor : grid[key]) {
-    //                         if (neighbor != &p && 
-    //                             glm::distance(p.position, neighbor->position) < h) {
-    //                             p.neighbors.push_back(neighbor);
-    //                         }
-    //                     }
-    //                 }
-
-    //             }
-                
-    //         }
-    //     }
-    // }
-
-
 constexpr uint32_t NO_PARTICLE = 0xFFFFFFFF;
 
-SpatialHash::SpatialHash(float cellSize, uint32_t tableSize)
-    : m_cellSize(cellSize), m_tableSize(tableSize), m_particleTable(nullptr) {}
+SpatialHash::SpatialHash(float smoothing_dist, uint32_t tableSize)
+    : m_cellSize(smoothing_dist), m_tableSize(tableSize), m_particleTable(nullptr), h(smoothing_dist) {}
 
 SpatialHash::~SpatialHash() {
     free(m_particleTable);
@@ -75,39 +26,40 @@ glm::ivec3 SpatialHash::positionToCell(const glm::vec3& pos) const {
 }
 
 void SpatialHash::build(std::vector<Particle>& particles) {
-
     m_sortedParticles.resize(particles.size());
     for(size_t i = 0; i < particles.size(); ++i) {
         m_sortedParticles[i] = &particles[i];
     }
 
-
     std::sort(m_sortedParticles.begin(), m_sortedParticles.end(),
         [this](const Particle* a, const Particle* b) {
-            // return computeHash(positionToCell(a->position)) < computeHash(positionToCell(b->position));
             return a->hash_value < b->hash_value;
-
         });
 
-    // 3. Build hash table
     m_particleTable = static_cast<uint32_t*>(malloc(m_tableSize * sizeof(uint32_t)));
     std::fill_n(m_particleTable, m_tableSize, NO_PARTICLE);
 
     uint32_t prevHash = NO_PARTICLE;
     for(uint32_t i = 0; i < m_sortedParticles.size(); ++i) {
-        const uint32_t currentHash = computeHash(
-            positionToCell(m_sortedParticles[i]->position));
+        const uint32_t currentHash = m_sortedParticles[i]->hash_value;
         
         if(currentHash != prevHash) {
             m_particleTable[currentHash] = i;
             prevHash = currentHash;
         }
     }
+
+    m_sortedParticlesC.resize(particles.size());
+    for(size_t i = 0; i < particles.size(); ++i) {
+        m_sortedParticlesC[i] = *m_sortedParticles[i];
+    }
 }
 
 void SpatialHash::queryNeighbors(
-    glm::vec3 pos, std::vector<Particle*>& neighbors, float radius) const 
+    glm::vec3 pos, std::vector<Particle*>& neighbors)
 {
+    float radius = h;
+
     const glm::ivec3 baseCell = positionToCell(pos);
     const int searchRadius = static_cast<int>(std::ceil(radius / m_cellSize));
 
@@ -119,19 +71,13 @@ void SpatialHash::queryNeighbors(
 
                 if(m_particleTable[hash] == NO_PARTICLE) continue;
 
-                // Find particles in this cell
                 uint32_t i = m_particleTable[hash];
-                while(i < m_sortedParticles.size() && 
-                      computeHash(positionToCell(m_sortedParticles[i]->position)) == hash) 
-                {
-                    if(glm::distance(pos, m_sortedParticles[i]->position) <= radius) {
-                        neighbors.push_back(m_sortedParticles[i]);
-                    }
+                while(i < m_sortedParticlesC.size() && m_sortedParticlesC[i].hash_value == hash) {
+                    neighbors.push_back(&m_sortedParticlesC[i]);
+
                     ++i;
                 }
             }
         }
     }
-    // return neighbors;
-    // particle.neighbors = neighbors;
 }

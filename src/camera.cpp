@@ -5,6 +5,4 @@ Camera::Camera(glm::vec3 pos_i, glm::vec3 target_i, glm::vec3 up_i, float fov_i,
                                                                    width(width_i), height(height_i), near(near_i), far(far_i) {
     view = glm::lookAt(pos, target, up);
     projection = glm::perspective(fov, width / height, near, far);
-
-    // transform = projection * view;
 }

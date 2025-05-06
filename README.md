@@ -121,9 +121,12 @@ This is significantly more scalable than basic SPH implementations, which typica
 ---
 
 ## 📸 Screenshots (Optional)
-
+- Basic SPH 
 ![alt text](image.png)
+- Mesh drawn over particles
 ![alt text](image-1.png)
+- Final Outputs
+  
 ![alt text](image-2.png)
 ![alt text](image-3.png)
 

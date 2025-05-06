@@ -90,18 +90,6 @@ This is significantly more scalable than basic SPH implementations, which typica
 
 ---
 
-## 👥 Team Contributions
-
-The project was primarily developed **collaboratively (~90%)** by both members. Key areas of individual contribution:
-
-- **Rajiv**  
-  → Offline rendering, Phong shading, visual output polish
-
-- **Taha Khan**  
-  → Threading logic, performance tuning, workload parallelization
-
----
-
 ## 🧪 Dependencies
 
 - C++17 or later

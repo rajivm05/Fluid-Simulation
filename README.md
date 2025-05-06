@@ -121,15 +121,17 @@ This is significantly more scalable than basic SPH implementations, which typica
 ---
 
 ## 📸 Screenshots
-- Basic SPH 
-![alt text](image.png)
-- Mesh drawn over particles
-![alt text](image-1.png)
-- Final Outputs
-  
-![alt text](image-2.png)
-![alt text](image-3.png)
-
+<div>
+<h3>Basic SPH</h3>
+<img src="image.png width = "800">
+<h3>Mesh drawn over particles</h3>
+<img src="image-1.png width = "800">
+<h3>Final Outputs</h3>
+<div align="center">
+  <img src="image-2.png" width="800">
+  <img src="image-3.png" width="800">
+</div>  
+</div>
 ---
 
 ## 🧼 License
